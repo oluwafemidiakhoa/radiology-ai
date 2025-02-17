@@ -7,15 +7,15 @@ import base64
 from models import store_report
 from config import OPENAI_API_KEY
 
-# ✅ Initialize OpenAI client (Updated for v1.x)
+# Initialize OpenAI client
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Radiology AI Backend")
 
-# ✅ Allow CORS for frontend communication
+# Allow CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to frontend URL for security (e.g., ["https://your-frontend.com"])
+    allow_origins=["*"],  # Change this to frontend URL for security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,15 +32,15 @@ def health_check():
 @app.post("/analyze-image/")
 async def analyze_image(file: UploadFile = File(...)):
     try:
-        # ✅ Read and process the uploaded image
+        # Read and process the uploaded image
         image_data = await file.read()
         image = Image.open(io.BytesIO(image_data))
         
-        # ✅ Convert RGBA/P images to RGB (Fixes transparency issue)
+        # Convert RGBA/P images to RGB
         if image.mode in ["RGBA", "P"]:
             image = image.convert("RGB")
 
-        # ✅ Convert image to Base64 for OpenAI API
+        # Convert image to Base64
         buffered = io.BytesIO()
         image.save(buffered, format="JPEG")
         img_bytes = base64.b64encode(buffered.getvalue()).decode()
@@ -48,7 +48,7 @@ async def analyze_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
 
-    # ✅ Construct OpenAI API request
+    # Construct OpenAI API request
     messages = [
         {"role": "system", "content": "You are a radiologist analyzing medical images."},
         {"role": "user", "content": [
@@ -58,20 +58,20 @@ async def analyze_image(file: UploadFile = File(...)):
     ]
 
     try:
-        # ✅ Call OpenAI API (Updated for v1.x)
+        # Call OpenAI API
         response = client.chat.completions.create(
-            model="gpt-4-turbo",  # Use latest model
+            model="gpt-4-turbo",
             messages=messages,
             max_tokens=500
         )
-        report = response.choices[0].message.content  # ✅ Corrected response parsing
+        report = response.choices[0].message.content
 
     except openai.OpenAIError as e:
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-    # ✅ Store report in database
+    # Store report in database
     store_report(file.filename, report)
 
     return {"filename": file.filename, "AI_Analysis": report}
