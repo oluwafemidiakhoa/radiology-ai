@@ -1,4 +1,4 @@
-const API_URL = "https://radiology-ai.onrender.com"; // ✅ Use the deployed backend URL
+const API_URL = process.env.REACT_APP_API_URL; // ✅ Use Netlify environment variable
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
