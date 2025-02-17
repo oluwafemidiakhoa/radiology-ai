@@ -1,4 +1,6 @@
-const API_URL = process.env.REACT_APP_API_URL; // ✅ Use Netlify environment variable
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_API_URL; // Should be http://127.0.0.1:8000 locally
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
@@ -8,10 +10,12 @@ export const analyzeImage = async (file) => {
     const response = await axios.post(`${API_URL}/analyze-image/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    console.log("API Response:", response.data);
 
     if (response.data && response.data.AI_Analysis) {
-      return response.data; 
+      return response.data;
     } else {
+      console.error("Unexpected response format:", response.data);
       throw new Error("Invalid response format from backend");
     }
   } catch (error) {
