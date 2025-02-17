@@ -7,39 +7,48 @@ import base64
 from models import store_report
 from config import OPENAI_API_KEY
 
-# Initialize OpenAI client
+# ✅ Initialize OpenAI client (Updated for v1.x)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Radiology AI Backend")
 
-# Allow CORS for frontend communication
+# ✅ Allow CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change this to frontend URL for security (e.g., ["https://your-frontend.com"])
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.get("/")
+def home():
+    return {"message": "Radiology AI Backend is Running 🚀"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 @app.post("/analyze-image/")
 async def analyze_image(file: UploadFile = File(...)):
     try:
-        # Read the uploaded file and load it as an image
+        # ✅ Read and process the uploaded image
         image_data = await file.read()
         image = Image.open(io.BytesIO(image_data))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid image file")
+        
+        # ✅ Convert RGBA/P images to RGB (Fixes transparency issue)
+        if image.mode in ["RGBA", "P"]:
+            image = image.convert("RGB")
 
-    # Convert RGBA images to RGB (Fixes transparency issue)
-    if image.mode in ["RGBA", "P"]:
-        image = image.convert("RGB")
+        # ✅ Convert image to Base64 for OpenAI API
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        img_bytes = base64.b64encode(buffered.getvalue()).decode()
 
-    # Convert image to base64
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG")
-    img_bytes = base64.b64encode(buffered.getvalue()).decode()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
 
-    # ✅ Correct OpenAI API request format
+    # ✅ Construct OpenAI API request
     messages = [
         {"role": "system", "content": "You are a radiologist analyzing medical images."},
         {"role": "user", "content": [
@@ -49,16 +58,20 @@ async def analyze_image(file: UploadFile = File(...)):
     ]
 
     try:
+        # ✅ Call OpenAI API (Updated for v1.x)
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model="gpt-4-turbo",  # Use latest model
             messages=messages,
             max_tokens=500
         )
-        report = response.choices[0].message.content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
+        report = response.choices[0].message.content  # ✅ Corrected response parsing
 
-    # Store report in the database
+    except openai.OpenAIError as e:
+        raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+    # ✅ Store report in database
     store_report(file.filename, report)
 
     return {"filename": file.filename, "AI_Analysis": report}
