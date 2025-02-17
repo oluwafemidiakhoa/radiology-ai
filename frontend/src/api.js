@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL; // Should be http://127.0.0.1:8000 locally
+const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com";
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
@@ -15,7 +15,6 @@ export const analyzeImage = async (file) => {
     if (response.data && response.data.AI_Analysis) {
       return response.data;
     } else {
-      console.error("Unexpected response format:", response.data);
       throw new Error("Invalid response format from backend");
     }
   } catch (error) {
@@ -23,3 +22,4 @@ export const analyzeImage = async (file) => {
     return { error: "Failed to analyze image. Please try again." };
   }
 };
+
