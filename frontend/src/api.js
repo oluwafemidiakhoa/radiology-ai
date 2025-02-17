@@ -1,7 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com"; 
-// Uses environment variable if available, otherwise defaults to deployed backend
+const API_URL = "https://radiology-ai.onrender.com"; // ✅ Use the deployed backend URL
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
@@ -9,13 +6,11 @@ export const analyzeImage = async (file) => {
 
   try {
     const response = await axios.post(`${API_URL}/analyze-image/`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     if (response.data && response.data.AI_Analysis) {
-      return response.data; // ✅ Return the correct AI analysis response
+      return response.data; 
     } else {
       throw new Error("Invalid response format from backend");
     }
@@ -24,4 +19,3 @@ export const analyzeImage = async (file) => {
     return { error: "Failed to analyze image. Please try again." };
   }
 };
-
