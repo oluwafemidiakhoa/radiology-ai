@@ -1,0 +1,4 @@
+# Ignore environment files (API keys, secrets)
+.env
+backend/.env
+frontend/.env
