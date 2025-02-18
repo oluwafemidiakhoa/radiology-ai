@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com";
+const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.vercel.app";
+
+
+
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
