@@ -4,3 +4,5 @@ python-multipart
 openai
 pydicom
 numpy
+sentry-sdk
+slowapi
