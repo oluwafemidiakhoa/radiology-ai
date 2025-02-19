@@ -1,27 +1,48 @@
-import axios from "axios";
+import axios from 'axios';
 
-// If REACT_APP_API_URL is not defined, default to the Render URL.
-const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com";
+// Define the API base URL, defaulting to the Render URL if not specified in environment variables.
+const API_URL = process.env.REACT_APP_API_URL || 'https://radiology-ai.onrender.com';
 
+// Create an Axios instance with default configurations.
+const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
+
+// Add a response interceptor to handle API responses and errors globally.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Extract error message from response or use a generic message.
+    const errorMessage = error.response?.data?.message || 'An unexpected error occurred. Please try again.';
+    console.error('API Error:', errorMessage);
+    return Promise.reject(new Error(errorMessage));
+  }
+);
+
+/**
+ * Analyzes a medical image by uploading it to the backend API.
+ *
+ * @param {File} file - The image file to be analyzed.
+ * @returns {Promise<Object>} - A promise that resolves to the analysis result or an error object.
+ */
 export const analyzeImage = async (file) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
 
   try {
-    const { data } = await axios.post(`${API_URL}/analyze-image/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    console.log("API Response:", data);
+    const { data } = await apiClient.post('/analyze-image/', formData);
+    console.log('API Response:', data);
 
     if (data && data.AI_Analysis) {
-      // Return the data object if it contains the expected key.
       return data;
     } else {
-      throw new Error("Invalid response format from backend");
+      throw new Error('Invalid response format from backend');
     }
   } catch (error) {
-    console.error("Error analyzing image:", error.response?.data || error.message);
-    return { error: "Failed to analyze image. Please try again." };
+    // Error is already logged and handled by the interceptor; rethrow to propagate.
+    return { error: error.message };
   }
 };
