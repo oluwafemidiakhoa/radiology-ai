@@ -9,7 +9,7 @@ from PIL import Image, UnidentifiedImageError
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-# If you have a HIPAA-compliant storage function, import it here.
+# Secure storage function (ensure HIPAA compliance)
 from models import store_report
 from config import OPENAI_API_KEY
 
@@ -19,21 +19,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ProdMedicalImagingAI")
 
-# The new asynchronous OpenAI client (v1.0)
+# Import new asynchronous OpenAI client (v1.0)
 from openai import AsyncOpenAI
-
-# Instantiate the async client
 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 
 app = FastAPI(
     title="Medical Images AI",
     description=(
-        "AI solution for medical imaging."
+        "AI solution for advanced medical imaging analysis. "
     ),
     version="2.0.0",
 )
 
-# Basic CORS for demonstration (adjust in production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,100 +50,94 @@ async def health_check():
 @app.post("/analyze-image/")
 async def analyze_image(file: UploadFile = File(...)):
     """
-    AI-driven medical imaging.
+    AI-driven medical imaging analysis endpoint.
     """
-    # Step 1: Read the file
+    # Step 1: Read file
     try:
         image_data = await file.read()
         filename = file.filename.lower()
         logger.info(f"File received: {filename}")
-    except Exception as exc:
-        logger.exception("Error reading uploaded file")
+    except Exception as e:
+        logger.exception("Error reading file")
         raise HTTPException(status_code=400, detail="Unable to read the uploaded file.")
 
-    # Step 2: Process image (DICOM vs standard)
+    # Step 2: Process image (DICOM vs. standard)
     try:
         if filename.endswith(".dcm"):
             dicom_data = pydicom.dcmread(io.BytesIO(image_data))
             img_array = dicom_data.pixel_array
-            # Normalize pixel values to [0, 255]
-            norm_img = ((img_array - np.min(img_array)) / (np.ptp(img_array)) * 255).astype(np.uint8)
+            norm_img = ((img_array - np.min(img_array)) / np.ptp(img_array) * 255).astype(np.uint8)
             image = Image.fromarray(norm_img)
             logger.info("DICOM image processed successfully.")
         else:
             image = Image.open(io.BytesIO(image_data))
             logger.info(f"Standard image processed: mode={image.mode}, size={image.size}")
-
         if image.mode not in ["RGB", "L"]:
             image = image.convert("RGB")
-
-        # Optionally encode as Base64
-        buffer = io.BytesIO()
-        image.save(buffer, format="JPEG")
-        b64_image = base64.b64encode(buffer.getvalue()).decode()
-    except (UnidentifiedImageError, Exception) as exc:
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG")
+        b64_image = base64.b64encode(buf.getvalue()).decode()
+    except (UnidentifiedImageError, Exception) as e:
         logger.exception("Error processing image")
         raise HTTPException(status_code=400, detail="Image processing failed. Ensure the file is valid.")
 
-    # Step 3: Build the concise heading-level Markdown prompt
-    prompt_md = (
-        "You are an advanced medical imaging AI. Provide a board-level report with **no** numeric labeling, "
-        "only heading-level Markdown (`##` and `###`) for bold headings:\n\n"
+    # Step 3: Build the diagnostic prompt with heading-level Markdown
+    diagnostic_prompt = (
+        "You are an advanced medical imaging AI that follows ACR/ESR guidelines. Generate a board-level diagnostic report exactly as follows:\n\n"
 
         "## Technical Assessment\n"
-        "### Projection & Positioning\n"
-        "This is an anterior-posterior (AP) chest X-ray capturing the lungs, heart, and thoracic structures.\n"
-        "### Image Quality\n"
-        "Exposure appears suitable for routine evaluation, though subtle underpenetration may obscure minor findings.\n"
-        "Rotation: Spinous processes/clavicular alignment suggest minimal rotation.\n"
-        "Artifacts: No lines, tubes, or hardware noted.\n\n"
+        "### Projection & Positioning:\n"
+        "The image is an anterior-posterior (AP) chest X-ray. This projection captures the lung fields, heart, and thoracic structures, including the clavicles, ribs, and portions of the diaphragm.\n"
+        "### Image Quality:\n"
+        "Exposure: The contrast appears acceptable for routine evaluation, though subtle underpenetration cannot be excluded without further views.\n"
+        "Rotation: The spinous processes and clavicular alignment suggest minimal rotation.\n"
+        "Artifacts: No external lines, tubes, or hardware are evident.\n\n"
 
         "## Systematic Review of Structures\n"
-        "### Cardiac Silhouette & Mediastinum\n"
-        "Heart size and contours are within normal limits; mediastinal structures properly oriented.\n"
-        "### Lungs & Pleural Spaces\n"
-        "No focal opacities indicating consolidation, pneumonia, or mass; pleural spaces are clear.\n"
-        "### Diaphragm\n"
-        "Diaphragm is well-defined, with no elevation or free air.\n"
-        "### Bones\n"
-        "Ribs, spine, and clavicles appear intact, no fractures or lytic lesions.\n"
-        "### Trachea & Airways\n"
-        "Trachea is midline, airway unobstructed.\n"
-        "### Soft Tissues\n"
-        "No abnormal soft tissue masses or calcifications.\n\n"
+        "### Cardiac Silhouette & Mediastinum:\n"
+        "The heart size and contours are within normal limits for an AP projection. The mediastinal structures, including the aortic knob and tracheal alignment, are properly oriented.\n"
+        "### Lungs & Pleural Spaces:\n"
+        "The lung fields are uniformly radiolucent without focal opacities suggesting consolidation, pneumonia, or mass. The pleural spaces are clear, and the costophrenic angles are sharp, indicating no effusion.\n"
+        "### Diaphragm:\n"
+        "The diaphragm is well visualized, with no signs of elevation or subdiaphragmatic air.\n"
+        "### Bones:\n"
+        "The ribs, spine, and clavicles exhibit normal contours, with no evidence of fractures or lytic lesions.\n"
+        "### Trachea & Airways:\n"
+        "The trachea is centrally positioned, and the airway appears unobstructed.\n"
+        "### Soft Tissues:\n"
+        "No abnormal soft tissue masses or calcifications observed.\n\n"
 
         "## Potential Clinical Correlation & Differential Considerations\n"
-        "### Normal Variation\n"
-        "Findings are largely consistent with a normal AP chest X-ray.\n"
-        "### Early or Minimal Changes\n"
-        "If clinical suspicion arises (e.g., respiratory distress, chest pain), correlate with labs and history.\n"
-        "### Differential Considerations\n"
-        "No significant pathology evident; consider further imaging (PA/lateral views, CT chest) if symptoms persist.\n\n"
+        "### Normal Variation:\n"
+        "The findings are largely within normal limits for an AP chest X-ray, though mild underexposure may mask minimal pathology.\n"
+        "### Early or Minimal Changes:\n"
+        "In cases of clinical suspicion (e.g., respiratory distress, chest pain), correlate with patient history and labs.\n"
+        "### Differential Considerations:\n"
+        "With no significant opacities or structural abnormalities, acute pathology (e.g., pneumonia, pleural effusion, cardiomegaly) is unlikely. If symptoms persist, additional imaging (PA/lateral views, CT chest) should be considered.\n\n"
 
-        "## Recommended Next Steps\n"
-        "### Clinical Correlation\n"
-        "Evaluate patient presentation, vital signs, labs.\n"
-        "### Additional Imaging\n"
-        "Consider MRI, PET, or contrast-enhanced CT for subtle or complex findings.\n"
-        "### Oncology Biomarker Correlation\n"
-        "If malignancy is suspected, correlate with CA-125, AFP, PSA, or other relevant markers.\n"
-        "### Interdisciplinary Consultation\n"
-        "Involve radiology, oncology, cardiology, or pulmonology for complex cases.\n\n"
+        "## Recommended Next Steps (Hypothetical)\n"
+        "### Clinical Correlation:\n"
+        "Review the patient’s presentation, vital signs, and laboratory findings (including inflammatory markers).\n"
+        "### Additional Imaging:\n"
+        "Consider high-resolution imaging (MRI, PET, or contrast-enhanced CT) if subtle lesions are suspected.\n"
+        "### Oncology Biomarker Correlation:\n"
+        "If oncologic processes are suspected, correlate with biomarkers such as CA-125, AFP, PSA, or other tumor markers.\n"
+        "### Interdisciplinary Consultation:\n"
+        "Engage radiology, oncology, cardiology, or pulmonology specialists for complex cases.\n\n"
 
         "## AI-Driven Uncertainty Quantification\n"
-        "### Confidence in Findings\n"
+        "### Confidence in Findings:\n"
         "Absence of Focal Consolidation: ~88% confidence\n"
         "Clear Pleural Spaces: ~92% confidence\n"
-        "Normal Cardiac Silhouette: ~85% confidence\n\n"
-        "_(Values are illustrative; always integrate with clinical judgment.)_\n\n"
-        "Concluding Note:\n"
-        "No acute abnormalities detected on this AP chest X-ray. If symptoms persist or risk factors are present, "
-        "consider advanced imaging or specialist input."
+        "Normal Cardiac Silhouette: ~85% confidence\n"
+        "_(These values are illustrative; always integrate with clinical judgment.)_\n\n"
+
+        "In summary, the AP chest X-ray demonstrates no significant abnormalities in cardiac and mediastinal contours, clear lung fields, and no evidence of pleural effusion or bone pathology. If clinical symptoms persist, further imaging and specialist consultation are recommended."
     )
 
     messages = [
-        {"role": "system", "content": prompt_md},
-        {"role": "user", "content": "Please analyze this medical image and generate a final report with heading-level Markdown."}
+        {"role": "system", "content": diagnostic_prompt},
+        {"role": "user", "content": "Analyze this medical image and generate an expert diagnostic report."}
     ]
 
     # Step 4: Call GPT-4o asynchronously
@@ -163,14 +154,14 @@ async def analyze_image(file: UploadFile = File(...)):
         logger.exception("OpenAI API error")
         raise HTTPException(status_code=500, detail="AI analysis failed. Please try again later.")
 
-    # Step 5: Store the AI-generated report
+    # Step 5: Store the generated report.
     try:
         store_report(filename, analysis)
         logger.info(f"Report stored successfully for file: {filename}")
     except Exception as exc:
         logger.warning("Failed to store report", exc_info=True)
 
-    # Step 6: Return the final Markdown-formatted report
+    # Step 6: Return the diagnostic report.
     return {
         "filename": filename,
         "AI_Analysis": analysis,
