@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8002";
+// If REACT_APP_API_URL is not defined, default to the Render URL.
+const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com";
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();
@@ -11,11 +12,11 @@ export const analyzeImage = async (file) => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    console.log("API Response:", data); // This logs the actual response body
+    console.log("API Response:", data);
 
     if (data && data.AI_Analysis) {
-      // Return just the data, not the entire axios response
-      return data; 
+      // Return the data object if it contains the expected key.
+      return data;
     } else {
       throw new Error("Invalid response format from backend");
     }
