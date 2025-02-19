@@ -116,7 +116,7 @@ async def analyze_image(file: UploadFile = File(...)):
     # Step 4: Call OpenAI's async API for GPT-4 analysis.
     try:
         response = await client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             max_tokens=2000,
             temperature=0.2  # Low temperature for accuracy
