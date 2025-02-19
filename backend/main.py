@@ -30,10 +30,7 @@ client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 app = FastAPI(
     title="Medical Imaging AI",
     description=(
-        "A production-grade AI solution for advanced medical imaging analysis. "
-        "This system provides high-resolution imaging recommendations (MRI, PET-CT, contrast-enhanced CT) and "
-        "integrates oncologic biomarker correlations (e.g., CA-125, AFP, PSA) to deliver expert-level diagnostic insights. "
-        "All results must be validated by certified medical professionals."
+        "AI solution for advanced medical imaging analysis. "
     ),
     version="2.0.0",
 )
@@ -59,18 +56,6 @@ async def health_check():
 async def analyze_image(file: UploadFile = File(...)):
     """
     Advanced AI-driven medical imaging analysis endpoint.
-
-    Workflow:
-      1. Ingest and validate the uploaded file (supports DICOM and standard image formats).
-      2. Process and normalize the image.
-      3. Construct a detailed diagnostic prompt including:
-           - Technical assessment and systematic review
-           - Advanced imaging recommendations (MRI, PET-CT, contrast-enhanced CT)
-           - Oncologic biomarker correlations (CA-125, AFP, PSA, etc.)
-      4. Invoke OpenAI's GPT-4o asynchronously to generate a board-level diagnostic report.
-      5. Store and return the structured report.
-
-    This endpoint is built for production and meets rigorous clinical standards.
     """
     # Step 1: Ingest the file.
     try:
