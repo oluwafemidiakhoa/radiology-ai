@@ -2,27 +2,24 @@ import React, { useState } from "react";
 import UploadImage from "./UploadImage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// Import all icons from Heroicons v1 for consistency
+
+// Heroicons v1 (consistent version)
 import { UploadIcon, CheckCircleIcon, ExclamationIcon } from "@heroicons/react/solid";
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   // Toggle dark/light mode
-  const toggleDarkMode = () => {
-    setDarkMode(prevMode => !prevMode);
-  };
+  const toggleDarkMode = () => setDarkMode((prevMode) => !prevMode);
 
-  // Scroll to top functionality
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Smooth scroll-to-top
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <div className={`${darkMode ? "dark" : ""} min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 font-sans`}>
       {/* Sticky Header / Hero Section */}
       <header className="sticky top-0 z-50 relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 dark:from-gray-800 dark:to-gray-900 text-white shadow-md">
-        {/* Top-right controls: Beta badge & Dark Mode toggle */}
+        {/* Top-right Controls (Dark Mode + Beta Badge) */}
         <div className="absolute top-4 right-4 flex items-center space-x-2">
           <span className="px-2 py-1 bg-yellow-300 text-yellow-900 text-xs font-bold rounded-full">
             BETA
@@ -35,7 +32,7 @@ function App() {
           </button>
         </div>
 
-        {/* Background Pattern via inline style (from public/assets) */}
+        {/* Background Pattern (ensure pattern.svg is in public/assets) */}
         <div
           style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/pattern.svg)` }}
           className="absolute inset-0 opacity-20 pointer-events-none bg-cover bg-center"
@@ -50,7 +47,8 @@ function App() {
           </p>
           <a
             href="#main-content"
-            className="inline-block mt-6 px-8 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:shadow-lg hover:bg-blue-50 hover:scale-105 transform transition-transform"
+            className="inline-block mt-6 px-8 py-3 bg-white text-blue-700 font-semibold rounded-md shadow
+                       hover:shadow-lg hover:bg-blue-50 hover:scale-105 transform transition-transform"
           >
             Get Started
           </a>
@@ -61,17 +59,17 @@ function App() {
       <main id="main-content" className="flex-1 w-full max-w-6xl mx-auto px-4 mt-8 mb-8">
         {/* Multi-Step Wizard Indicator */}
         <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4 mb-8">
-          {/* Step 1: Upload (active) */}
+          {/* Step 1 (Active) */}
           <div className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow ring-2 ring-blue-300 hover:scale-105 transform transition-transform">
             <UploadIcon className="h-4 w-4" />
             <span>Step 1: Upload</span>
           </div>
-          {/* Step 2: Analyze */}
+          {/* Step 2 */}
           <div className="flex items-center space-x-2 px-4 py-2 bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-full shadow hover:scale-105 transform transition-transform">
             <CheckCircleIcon className="h-4 w-4" />
             <span>Step 2: Analyze</span>
           </div>
-          {/* Step 3: Results */}
+          {/* Step 3 */}
           <div className="flex items-center space-x-2 px-4 py-2 bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-full shadow hover:scale-105 transform transition-transform">
             <CheckCircleIcon className="h-4 w-4" />
             <span>Step 3: Results</span>
@@ -83,11 +81,13 @@ function App() {
           <UploadImage />
         </section>
 
-        {/* Disclaimer Section with Icon */}
+        {/* Disclaimer Section with Exclamation Icon */}
         <section className="mt-8 p-4 bg-yellow-100 dark:bg-yellow-200 border-l-4 border-yellow-400 rounded-md text-yellow-800 dark:text-yellow-900 flex items-start space-x-2">
           <ExclamationIcon className="h-5 w-5 mt-1 text-yellow-700 dark:text-yellow-800" />
           <p className="text-sm leading-relaxed">
-            <strong>Disclaimer:</strong> This AI tool is for educational/assistive use only. It does not replace professional clinical judgment.
+            <strong>Disclaimer:</strong> This AI tool is designed to <em>assist</em> with medical imaging analysis,
+            but it does <em>not</em> replace the expertise of a certified medical professional.
+            Always consult a qualified practitioner for final interpretations and decisions.
           </p>
         </section>
       </main>
@@ -97,11 +97,17 @@ function App() {
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-500 dark:text-gray-400 text-sm">
           <p>&copy; 2025 Medical Images AI. All rights reserved.</p>
           <p className="mt-1">
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline transition-colors">
+            <a
+              href="#"
+              className="text-blue-600 dark:text-blue-400 hover:underline transition-colors"
+            >
               Privacy Policy
             </a>{" "}
             |{" "}
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline transition-colors">
+            <a
+              href="#"
+              className="text-blue-600 dark:text-blue-400 hover:underline transition-colors"
+            >
               Terms of Service
             </a>
           </p>
