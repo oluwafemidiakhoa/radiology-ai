@@ -7,3 +7,5 @@ pymongo
 python-dotenv
 pydicom
 numpy
+sentry-sdk
+slowapi
