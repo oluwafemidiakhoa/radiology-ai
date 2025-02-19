@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { ClipLoader } from "react-spinners";
+import ReactMarkdown from "react-markdown";
 import { analyzeImage } from "./api";
 
 const UploadImage = () => {
@@ -7,51 +9,121 @@ const UploadImage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Validate and set the file input
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setReport(""); // Clear previous report
-    setError(""); // Clear previous error
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    // Ensure file is an image
+    if (!selectedFile.type.startsWith("image/")) {
+      alert("Please upload a valid image file.");
+      return;
+    }
+
+    // Limit file size to 5MB
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert("File is too large. Please upload an image under 5MB.");
+      return;
+    }
+
+    setFile(selectedFile);
+    setError("");
+    setReport("");
   };
 
+  // Upload and analyze image
   const handleUpload = async () => {
     if (!file) {
-      setError("Please select an image before analyzing.");
+      setError("Please select an image file.");
       return;
     }
     setLoading(true);
-    setReport("");
     setError("");
+    setReport("");
 
     try {
-      const response = await analyzeImage(file);
-      if (response.AI_Analysis) {
-        setReport(response.AI_Analysis);
-      } else if (response.error) {
-        setError(response.error);
-      } else {
-        setError("Unexpected error: AI did not generate an analysis.");
-      }
-    } catch (error) {
-      setError("Error: AI analysis failed.");
-    }
+      const data = await analyzeImage(file);
+      console.log("Data from analyzeImage:", data);
 
-    setLoading(false);
+      if (data && data.AI_Analysis) {
+        // Assume the backend returns a fully structured Markdown report.
+        setReport(data.AI_Analysis);
+      } else if (data.error) {
+        setError(data.error);
+      } else {
+        setError("No AI analysis found in the response.");
+      }
+    } catch (err) {
+      console.error("Error analyzing image:", err);
+      setError("Error analyzing image. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div>
-      <h2>Upload Medical Image for AI Analysis</h2>
-      <input type="file" onChange={handleFileChange} />
-      <button onClick={handleUpload} disabled={loading}>
-        {loading ? "Analyzing..." : "Analyze Image"}
-      </button>
+    <div className="bg-white rounded-xl shadow-lg p-6 w-full">
+      <h2 className="text-2xl font-semibold text-gray-800 text-center mb-4">
+        Upload Medical Image
+      </h2>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      
+      {/* Disclaimer for Clinical Use */}
+      <p className="text-center text-sm text-gray-500 mb-4">
+
+      </p>
+
+      <div className="flex flex-col items-center">
+        {/* File Input */}
+        <label className="block w-full max-w-md mb-4">
+          <span className="sr-only">Choose Medical Image</span>
+          <input
+            type="file"
+            accept="image/*"
+            className="block w-full text-sm text-gray-700
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-md file:border-0
+              file:text-sm file:font-semibold
+              file:bg-blue-600 file:text-white
+              hover:file:bg-blue-700 cursor-pointer"
+            onChange={handleFileChange}
+          />
+        </label>
+
+        {/* Analyze Button */}
+        <button
+          onClick={handleUpload}
+          disabled={loading || !file}
+          className={`mt-2 px-6 py-3 rounded-md text-white font-semibold transition-all shadow-md ${
+            loading || !file ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          {loading ? "Analyzing..." : "Analyze Image"}
+        </button>
+
+        {/* Spinner */}
+        {loading && (
+          <div className="mt-4">
+            <ClipLoader color="#ffffff" size={20} />
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 text-red-600">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* AI Report Display */}
       {report && (
-        <div>
-          <h3>AI Report:</h3>
-          <p>{report}</p>
+        <div className="bg-white rounded-xl shadow-lg p-6 w-full mt-6">
+          <h3 className="text-xl font-bold text-gray-800 border-b pb-2">
+            AI Findings
+          </h3>
+          <div className="mt-4 text-gray-700 whitespace-pre-line">
+            <ReactMarkdown>{report}</ReactMarkdown>
+          </div>
         </div>
       )}
     </div>
