@@ -2,3 +2,4 @@ fastapi
 uvicorn
 python-multipart
 openai
+pydicom==2.3.0
