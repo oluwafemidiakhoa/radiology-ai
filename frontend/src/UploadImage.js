@@ -46,7 +46,7 @@ const UploadImage = () => {
       console.log("Data from analyzeImage:", data);
 
       if (data && data.AI_Analysis) {
-        // Assume the backend returns a fully structured Markdown report.
+        // The backend is expected to return a Markdown-formatted report with **bold** headings.
         setReport(data.AI_Analysis);
       } else if (data.error) {
         setError(data.error);
@@ -66,11 +66,6 @@ const UploadImage = () => {
       <h2 className="text-2xl font-semibold text-gray-800 text-center mb-4">
         Upload Medical Image
       </h2>
-
-      {/* Disclaimer for Clinical Use */}
-      <p className="text-center text-sm text-gray-500 mb-4">
-
-      </p>
 
       <div className="flex flex-col items-center">
         {/* File Input */}
@@ -121,7 +116,8 @@ const UploadImage = () => {
           <h3 className="text-xl font-bold text-gray-800 border-b pb-2">
             AI Findings
           </h3>
-          <div className="mt-4 text-gray-700 whitespace-pre-line">
+          <div className="mt-4 text-gray-700 whitespace-pre-wrap">
+            {/* ReactMarkdown to render bold headings (Markdown) from the AI's response */}
             <ReactMarkdown>{report}</ReactMarkdown>
           </div>
         </div>
