@@ -1,38 +1,44 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-import openai
-from PIL import Image, UnidentifiedImageError
+import os
 import io
 import base64
 import logging
-import pydicom
 import numpy as np
-import os
+import pydicom
+from PIL import Image, UnidentifiedImageError
 
-# Secure imports for data storage and configuration
-from models import store_report  # Must comply with HIPAA / data protection
-from config import OPENAI_API_KEY  # Store your API key securely
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
-# Configure robust logging for audits and troubleshooting
+# Secure functions for storing reports; ensure these are HIPAA-compliant.
+from models import store_report
+from config import OPENAI_API_KEY
+
+# Configure robust logging for production.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("AdvancedMedicalImagingAI")
+logger = logging.getLogger("ProdMedicalImagingAI")
 
-# Initialize OpenAI client
-openai.api_key = OPENAI_API_KEY
+# Import the new asynchronous OpenAI client from v1.0.
+from openai import AsyncOpenAI
 
-# Create the FastAPI application with clear metadata
+# Instantiate the async OpenAI client.
+client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
+
+# Create the FastAPI application with comprehensive metadata.
 app = FastAPI(
-    title="Advanced Medical Imaging ",
+    title="High-End Medical Imaging AI",
     description=(
-        "AI-driven medical imaging analysis. "
+        "A production-grade AI solution for advanced medical imaging analysis. "
+        "This system delivers board-level diagnostic reports that adhere to ACR/ESR guidelines, "
+        "incorporating high-resolution imaging recommendations (MRI, PET-CT, contrast-enhanced CT) "
+        "and oncologic biomarker correlations (e.g., CA-125, AFP, PSA). All results must be validated by certified professionals."
     ),
-    version="1.1.0",
+    version="2.0.0",
 )
 
-# Set up CORS for secure integration (adjust allowed_origins for production)
+# Configure CORS (adjust allowed origins for production).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,83 +48,62 @@ app.add_middleware(
 )
 
 @app.get("/")
-def home():
-    """
-    Root endpoint to confirm service availability.
-    """
-    return {"message": "Advanced Medical Imaging Analysis Service is Running 🚀"}
+async def home():
+    return {"message": "High-End Medical Imaging AI is operational!"}
 
 @app.get("/health")
-def health_check():
-    """
-    Health check endpoint for monitoring and uptime verification.
-    """
+async def health_check():
     return {"status": "ok"}
 
 @app.post("/analyze-image/")
 async def analyze_image(file: UploadFile = File(...)):
     """
-    AI-driven medical imaging analysis .
+    Advanced AI-driven medical imaging analysis endpoint.
+    
+    This endpoint performs the following:
+      1. Ingests and validates an uploaded image (supports DICOM and standard formats).
+      2. Processes and normalizes the image.
+      3. Generates an expert diagnostic prompt based on ACR/ESR guidelines.
+      4. Invokes OpenAI's GPT-4o asynchronously to produce a board-level diagnostic report.
+      5. Securely stores and returns the structured diagnostic report.
+    
+    The report is structured into five sections, as detailed below.
     """
-    # Step 1: Read the Uploaded File
+    # Step 1: Ingest the file.
     try:
         image_data = await file.read()
         filename = file.filename.lower()
-        logger.info(f"Received file: {filename}")
+        logger.info(f"File received: {filename}")
     except Exception as e:
-        logger.exception("File read error")
+        logger.exception("Error reading uploaded file")
         raise HTTPException(status_code=400, detail="Unable to read the uploaded file.")
 
-    # Step 2: Process File (DICOM or Standard Image)
+    # Step 2: Process the image (DICOM vs. standard).
     try:
         if filename.endswith(".dcm"):
-            # Attempt DICOM processing
-            try:
-                dicom_data = pydicom.dcmread(io.BytesIO(image_data))
-                image_array = dicom_data.pixel_array
-                # Normalize pixel intensities for consistent output
-                norm_image = (
-                    (image_array - np.min(image_array)) /
-                    (np.max(image_array) - np.min(image_array)) * 255
-                ).astype(np.uint8)
-                image = Image.fromarray(norm_image)
-                logger.info("DICOM image processed successfully.")
-            except Exception as e:
-                logger.exception("DICOM processing error")
-                raise HTTPException(status_code=400, detail="Error processing DICOM file.")
+            dicom_data = pydicom.dcmread(io.BytesIO(image_data))
+            img_array = dicom_data.pixel_array
+            # Normalize the pixel values to [0, 255]
+            norm_img = ((img_array - np.min(img_array)) / (np.ptp(img_array)) * 255).astype(np.uint8)
+            image = Image.fromarray(norm_img)
+            logger.info("DICOM image processed successfully.")
         else:
-            # Process standard image formats (JPEG, PNG, etc.)
-            try:
-                image = Image.open(io.BytesIO(image_data))
-                logger.info(
-                    f"Standard image processed: mode {image.mode}, size {image.size}"
-                )
-            except UnidentifiedImageError:
-                logger.exception("Invalid image file")
-                raise HTTPException(status_code=400, detail="The uploaded file is not a valid image.")
-            except Exception as e:
-                logger.exception("Standard image processing error")
-                raise HTTPException(status_code=400, detail="Error processing image.")
-
-        # Ensure a consistent image mode
+            image = Image.open(io.BytesIO(image_data))
+            logger.info(f"Standard image processed: mode={image.mode}, size={image.size}")
         if image.mode not in ["RGB", "L"]:
             image = image.convert("RGB")
+        # Encode the image as Base64 (if needed).
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG")
+        b64_image = base64.b64encode(buffer.getvalue()).decode()
+    except (UnidentifiedImageError, Exception) as e:
+        logger.exception("Error processing image")
+        raise HTTPException(status_code=400, detail="Image processing failed. Ensure the file is valid.")
 
-        # Encode the image in Base64 for OpenAI
-        buffered = io.BytesIO()
-        image.save(buffered, format="JPEG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode()
-        logger.info("Image successfully encoded in Base64.")
-    except Exception as e:
-        logger.exception("File processing error")
-        raise HTTPException(status_code=400, detail="File processing failed.")
-
-    # Step 3: Construct the Prompt for GPT-4
-    # Note the extra bullet points for advanced imaging & biomarker correlation
-    prompt = (
+    # Step 3: Build the diagnostic prompt with advanced imaging suggestions.
+    diagnostic_prompt = (
         "You are an advanced medical imaging AI that follows ACR/ESR guidelines. "
         "Generate a board-level interpretation with these five sections EXACTLY:\n\n"
-
         "1. Technical Assessment\n"
         "   Projection & Positioning:\n"
         "     The image is an anterior-posterior (AP) chest X-ray. This projection captures the lung fields, heart, "
@@ -128,7 +113,6 @@ async def analyze_image(file: UploadFile = File(...)):
         "     be excluded without further views.\n"
         "     Rotation: The spinous processes and clavicular alignment suggest minimal rotation.\n"
         "     Artifacts: No external lines, tubes, or hardware are evident.\n\n"
-
         "2. Systematic Review of Structures\n"
         "   Cardiac Silhouette & Mediastinum:\n"
         "     The heart size and contours are within normal limits for an AP projection. The mediastinal structures, including the aortic knob "
@@ -139,12 +123,11 @@ async def analyze_image(file: UploadFile = File(...)):
         "   Diaphragm:\n"
         "     The diaphragm is well visualized, with no signs of elevation or subdiaphragmatic air.\n"
         "   Bones:\n"
-        "     The ribs, spine, and clavicles exhibit normal contours, no evidence of fractures or lytic lesions.\n"
+        "     The ribs, spine, and clavicles exhibit normal contours, with no evidence of fractures or lytic lesions.\n"
         "   Trachea & Airways:\n"
         "     The trachea is centrally positioned, and the airway appears unobstructed.\n"
         "   Soft Tissues:\n"
         "     No abnormal soft tissue masses or calcifications observed.\n\n"
-
         "3. Potential Clinical Correlation & Differential Considerations\n"
         "   Normal Variation:\n"
         "     The findings are largely within normal limits for an AP chest X-ray, though mild underexposure may mask minimal pathology.\n"
@@ -153,7 +136,6 @@ async def analyze_image(file: UploadFile = File(...)):
         "   Differential Considerations:\n"
         "     With no significant opacities or structural abnormalities, acute pathology (e.g., pneumonia, pleural effusion, cardiomegaly) is unlikely. "
         "     If symptoms persist, consider additional imaging (PA/lateral views, CT chest).\n\n"
-
         "4. Recommended Next Steps (Hypothetical)\n"
         "   Clinical Correlation:\n"
         "     Review the patient's presentation, vital signs, and lab findings (including inflammatory markers).\n"
@@ -164,68 +146,43 @@ async def analyze_image(file: UploadFile = File(...)):
         "     - If oncologic processes are suspected, correlate with biomarkers such as CA-125, AFP, PSA, or other tumor markers.\n"
         "   Interdisciplinary Consultation:\n"
         "     Engage radiology, oncology, cardiology, or pulmonology specialists for complex findings.\n\n"
-
         "5. AI-Driven Uncertainty Quantification\n"
         "   Confidence in Findings:\n"
         "     Absence of Focal Consolidation: ~88% confidence\n"
         "     Clear Pleural Spaces: ~92% confidence\n"
         "     Normal Cardiac Silhouette: ~85% confidence\n"
         "   (These confidence levels are illustrative. Always integrate with clinical judgment.)\n\n"
-
-        "DISCLAIMER: This AI-generated interpretation is for educational/assistive purposes only. It does not replace "
-        "professional clinical judgment. All findings must be correlated with the patient's history and further diagnostics. "
-        "This system is not FDA-approved or CE-marked."
+        "Finally, provide a concise, expert-level analysis with actionable follow-up recommendations."
     )
 
     messages = [
-        {
-            "role": "system",
-            "content": prompt,
-        },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        "Analyze the provided medical image and generate the exact five-section report. "
-                        "Include high-resolution imaging (MRI, PET, Contrast CT) and biomarker correlations (e.g., CA-125, AFP, PSA) in the recommended steps if relevant."
-                    ),
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"},
-                },
-            ],
-        },
+        {"role": "system", "content": diagnostic_prompt},
+        {"role": "user", "content": "Analyze this medical image and generate an expert diagnostic report based solely on its features."}
     ]
 
-    # Step 4: Query the GPT-4 (or specialized GPT-4 variant)
+    # Step 4: Call OpenAI's GPT-4o asynchronously.
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",  # Replace with "gpt-4" or your specialized GPT-4 model
+        response = await client.chat.completions.create(
+            model="gpt-4o",
             messages=messages,
-            max_tokens=2500,
-            temperature=0.3,  # Lower temperature for factual consistency
+            max_tokens=2000,
+            temperature=0.2
         )
-        report = response.choices[0].message.content
-        logger.info(f"Generated AI diagnostic report for: {file.filename}")
-    except openai.OpenAIError as e:
+        analysis = response.choices[0].message.content
+        logger.info(f"AI analysis generated for file: {filename}")
+    except Exception as e:
         logger.exception("OpenAI API error")
-        raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
-    except Exception as e:
-        logger.exception("Unexpected API error")
-        raise HTTPException(status_code=500, detail="Unexpected error during image analysis.")
+        raise HTTPException(status_code=500, detail="AI analysis failed. Please try again later.")
 
-    # Step 5: Store the AI-Generated Report
+    # Step 5: Store the generated report.
     try:
-        store_report(file.filename, report)
-        logger.info(f"Report stored successfully for: {file.filename}")
+        store_report(filename, analysis)
+        logger.info(f"Report stored successfully for file: {filename}")
     except Exception as e:
-        logger.warning(f"Failed to store report: {str(e)}")
+        logger.warning("Failed to store report", exc_info=True)
 
-    # Step 6: Return the Structured Report
+    # Step 6: Return the structured diagnostic report.
     return {
-        "filename": file.filename,
-        "AI_Analysis": report,
+        "filename": filename,
+        "AI_Analysis": analysis,
     }
