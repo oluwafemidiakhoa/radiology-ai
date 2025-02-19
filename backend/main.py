@@ -30,10 +30,7 @@ client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 app = FastAPI(
     title="High-End Medical Imaging AI",
     description=(
-        "A production-grade AI solution for advanced medical imaging analysis. "
-        "Our system provides high-resolution imaging recommendations (MRI, PET-CT, contrast-enhanced CT) "
-        "and integrates oncologic biomarker correlations (CA-125, AFP, PSA, etc.) to deliver expert diagnostic insights. "
-        "All results must be validated by certified medical professionals."
+        "AI solution for advanced medical imaging analysis. "
     ),
     version="2.0.0",
 )
