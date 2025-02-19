@@ -56,17 +56,6 @@ async def health_check():
 async def analyze_image(file: UploadFile = File(...)):
     """
     Advanced AI-driven medical imaging analysis endpoint.
-    
-    Workflow:
-      1. Ingest the image file (supports DICOM and standard formats).
-      2. Process and normalize the image.
-      3. Build an expert diagnostic prompt that includes:
-           - High-resolution imaging suggestions (MRI, PET-CT, contrast CT)
-           - Oncology biomarker correlation (e.g., CA-125, AFP, PSA)
-      4. Invoke OpenAI's GPT-4 asynchronously for analysis.
-      5. Store and return a structured, board-level diagnostic report.
-    
-    This endpoint is production-ready and designed for rigorous clinical review.
     """
     # Step 1: Ingest file
     try:
