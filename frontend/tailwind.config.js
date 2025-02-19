@@ -1,13 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class', // Allows toggling dark mode by adding a "dark" class to a parent element
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx,html}",
     "./public/index.html",
   ],
   theme: {
     extend: {
-      // Example color palette
       colors: {
         brandBlue: {
           50:  '#ebf5ff',
@@ -23,20 +22,14 @@ module.exports = {
         },
         brandDark: '#1A1A1A',
       },
-
-      // Example font families
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         heading: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
-
-      // Container config (optional)
       container: {
         center: true,
         padding: '1rem',
       },
-
-      // Additional custom spacing, shadows, transitions, etc.
       spacing: {
         '128': '32rem',
         '144': '36rem',
