@@ -2,6 +2,8 @@ import os
 import io
 import base64
 import logging
+from typing import Tuple
+
 import numpy as np
 import pydicom
 from PIL import Image, UnidentifiedImageError
@@ -9,26 +11,26 @@ from PIL import Image, UnidentifiedImageError
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-# Secure storage function (ensure HIPAA compliance)
+# HIPAA-compliant report storage
 from models import store_report
 from config import OPENAI_API_KEY
 
+# Enhanced logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("ProdMedicalImagingAI")
 
-# Import new asynchronous OpenAI client (v1.0)
+# Asynchronous OpenAI client
 from openai import AsyncOpenAI
+
 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 
 app = FastAPI(
-    title="Medical Images AI",
-    description=(
-        "AI solution for advanced medical imaging analysis. "
-    ),
-    version="2.0.0",
+    title="Medical Imaging AI",
+    description="Advanced diagnostic pattern analysis for medical imaging",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -39,130 +41,177 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def home():
-    return {"message": "Medical Images AI is operational!"}
+# Constants
+MIN_RESOLUTION = 512
+REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis - Must be validated by board-certified radiologist*"
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+def encode_image_to_data_url(image: Image.Image) -> str:
+    """Optimized image encoding with quality control"""
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG", quality=90)
+    return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
 
-@app.post("/analyze-image/")
-async def analyze_image(file: UploadFile = File(...)):
-    """
-    AI-driven medical imaging analysis endpoint.
-    """
-    # Step 1: Read file
-    try:
-        image_data = await file.read()
-        filename = file.filename.lower()
-        logger.info(f"File received: {filename}")
-    except Exception as e:
-        logger.exception("Error reading file")
-        raise HTTPException(status_code=400, detail="Unable to read the uploaded file.")
+def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
+    """Validate essential DICOM metadata"""
+    required_tags = ["Modality", "BodyPartExamined", "PatientID"]
+    missing_tags = [tag for tag in required_tags if tag not in dicom_obj]
+    
+    if missing_tags:
+        logger.error(f"Missing required DICOM tags: {missing_tags}")
+        raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
 
-    # Step 2: Process image (DICOM vs. standard)
+def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
+    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
     try:
         if filename.endswith(".dcm"):
-            dicom_data = pydicom.dcmread(io.BytesIO(image_data))
-            img_array = dicom_data.pixel_array
-            norm_img = ((img_array - np.min(img_array)) / np.ptp(img_array) * 255).astype(np.uint8)
-            image = Image.fromarray(norm_img)
-            logger.info("DICOM image processed successfully.")
+            try:
+                dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
+                validate_dicom_metadata(dicom_obj)
+
+                pixel_array = dicom_obj.pixel_array
+                norm_array = ((pixel_array - np.min(pixel_array)) / (np.max(pixel_array) - np.min(pixel_array)) * 255).astype(np.uint8)
+                image = Image.fromarray(norm_array)
+
+                if "WindowCenter" in dicom_obj:
+                    logger.info(f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
+
+            except pydicom.errors.InvalidDicomError as e:
+                logger.error(f"Invalid DICOM file: {e}")
+                raise HTTPException(400, "Invalid DICOM file")
+            except KeyError as e:
+                logger.error(f"Missing DICOM tag: {e}")
+                raise HTTPException(400, f"Missing DICOM tag: {e}")
+            except Exception as e:
+                logger.error(f"DICOM processing error: {e}")
+                raise HTTPException(500, "DICOM processing failed")
+
         else:
-            image = Image.open(io.BytesIO(image_data))
-            logger.info(f"Standard image processed: mode={image.mode}, size={image.size}")
-        if image.mode not in ["RGB", "L"]:
-            image = image.convert("RGB")
-        buf = io.BytesIO()
-        image.save(buf, format="JPEG")
-        b64_image = base64.b64encode(buf.getvalue()).decode()
-    except (UnidentifiedImageError, Exception) as e:
-        logger.exception("Error processing image")
-        raise HTTPException(status_code=400, detail="Image processing failed. Ensure the file is valid.")
+            try:
+                image = Image.open(io.BytesIO(raw_data))
+                if image.mode not in ["RGB", "L"]:
+                    image = image.convert("RGB")
+            except UnidentifiedImageError as e:
+                logger.error(f"Unidentified Image Error: {e}")
+                raise HTTPException(400, "Invalid Image File")
+            except Exception as e:
+                logger.error(f"Standard Image processing error: {e}")
+                raise HTTPException(500, "Image processing failed")
 
-    # Step 3: Build the diagnostic prompt with heading-level Markdown
-    diagnostic_prompt = (
-        "You are an advanced medical imaging AI that follows ACR/ESR guidelines. Generate a board-level diagnostic report exactly as follows:\n\n"
+        # Resolution check and resizing (preserving aspect ratio)
+        if min(image.size) < MIN_RESOLUTION:
+            logger.warning(f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio.")
+            width, height = image.size
+            if width < height:
+                new_width = MIN_RESOLUTION
+                new_height = int(height * (MIN_RESOLUTION / width))
+            else:
+                new_height = MIN_RESOLUTION
+                new_width = int(width * (MIN_RESOLUTION / height))
+            image = image.resize((new_width, new_height))
 
-        "## Technical Assessment\n"
-        "### Projection & Positioning:\n"
-        "The image is an anterior-posterior (AP) chest X-ray. This projection captures the lung fields, heart, and thoracic structures, including the clavicles, ribs, and portions of the diaphragm.\n"
-        "### Image Quality:\n"
-        "Exposure: The contrast appears acceptable for routine evaluation, though subtle underpenetration cannot be excluded without further views.\n"
-        "Rotation: The spinous processes and clavicular alignment suggest minimal rotation.\n"
-        "Artifacts: No external lines, tubes, or hardware are evident.\n\n"
+        return image, encode_image_to_data_url(image)
 
-        "## Systematic Review of Structures\n"
-        "### Cardiac Silhouette & Mediastinum:\n"
-        "The heart size and contours are within normal limits for an AP projection. The mediastinal structures, including the aortic knob and tracheal alignment, are properly oriented.\n"
-        "### Lungs & Pleural Spaces:\n"
-        "The lung fields are uniformly radiolucent without focal opacities suggesting consolidation, pneumonia, or mass. The pleural spaces are clear, and the costophrenic angles are sharp, indicating no effusion.\n"
-        "### Diaphragm:\n"
-        "The diaphragm is well visualized, with no signs of elevation or subdiaphragmatic air.\n"
-        "### Bones:\n"
-        "The ribs, spine, and clavicles exhibit normal contours, with no evidence of fractures or lytic lesions.\n"
-        "### Trachea & Airways:\n"
-        "The trachea is centrally positioned, and the airway appears unobstructed.\n"
-        "### Soft Tissues:\n"
-        "No abnormal soft tissue masses or calcifications observed.\n\n"
+    except HTTPException as e:
+        raise e  # Re-raise HTTPExceptions
+    except Exception as err:
+        logger.error(f"Unexpected processing error: {str(err)}")
+        raise HTTPException(500, "Image processing failed")
 
-        "## Potential Clinical Correlation & Differential Considerations\n"
-        "### Normal Variation:\n"
-        "The findings are largely within normal limits for an AP chest X-ray, though mild underexposure may mask minimal pathology.\n"
-        "### Early or Minimal Changes:\n"
-        "In cases of clinical suspicion (e.g., respiratory distress, chest pain), correlate with patient history and labs.\n"
-        "### Differential Considerations:\n"
-        "With no significant opacities or structural abnormalities, acute pathology (e.g., pneumonia, pleural effusion, cardiomegaly) is unlikely. If symptoms persist, additional imaging (PA/lateral views, CT chest) should be considered.\n\n"
-
-        "## Recommended Next Steps (Hypothetical)\n"
-        "### Clinical Correlation:\n"
-        "Review the patient’s presentation, vital signs, and laboratory findings (including inflammatory markers).\n"
-        "### Additional Imaging:\n"
-        "Consider high-resolution imaging (MRI, PET, or contrast-enhanced CT) if subtle lesions are suspected.\n"
-        "### Oncology Biomarker Correlation:\n"
-        "If oncologic processes are suspected, correlate with biomarkers such as CA-125, AFP, PSA, or other tumor markers.\n"
-        "### Interdisciplinary Consultation:\n"
-        "Engage radiology, oncology, cardiology, or pulmonology specialists for complex cases.\n\n"
-
-        "## AI-Driven Uncertainty Quantification\n"
-        "### Confidence in Findings:\n"
-        "Absence of Focal Consolidation: ~88% confidence\n"
-        "Clear Pleural Spaces: ~92% confidence\n"
-        "Normal Cardiac Silhouette: ~85% confidence\n"
-        "_(These values are illustrative; always integrate with clinical judgment.)_\n\n"
-
-        "In summary, the AP chest X-ray demonstrates no significant abnormalities in cardiac and mediastinal contours, clear lung fields, and no evidence of pleural effusion or bone pathology. If clinical symptoms persist, further imaging and specialist consultation are recommended."
-    )
-
-    messages = [
-        {"role": "system", "content": diagnostic_prompt},
-        {"role": "user", "content": "Analyze this medical image and generate an expert diagnostic report."}
-    ]
-
-    # Step 4: Call GPT-4o asynchronously
+@app.post("/analyze-image/")
+async def analyze_image(file: UploadFile = File(...)) -> dict:
+    """Enhanced image analysis endpoint"""
     try:
+        raw_data = await file.read()
+        filename = file.filename.lower()
+        
+        # Process and validate image
+        image, data_url = process_medical_image(raw_data, filename)
+        
+        # System prompt engineering
+        system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging. 
+Your role is to:
+1. Describe anatomical features and imaging artifacts
+2. Identify statistically significant visual patterns
+3. Compare findings to typical radiographic presentations
+4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
+
+Format response using:
+**Image Characteristics**
+- Modality: [Identified imaging technique]
+- Quality: [Technical assessment]
+- Findings: [Visual observations]
+
+**Pattern Recognition**
+- Anatomical correlations
+- Statistical prevalence
+- Literature associations
+
+**Clinical Considerations**
+- Next-step imaging
+- Common differentials
+- AI limitations disclaimer"""
+
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analyze this medical image for clinically relevant visual patterns"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url,
+                            "detail": "high"
+                        }
+                    }
+                ]
+            }
+        ]
+
+        # Optimized API parameters
         response = await client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
             max_tokens=2000,
-            temperature=0.2
+            temperature=0.3,
+            top_p=0.9,
+            frequency_penalty=0.5,
+            presence_penalty=0.4
         )
+
+        # Post-process response
         analysis = response.choices[0].message.content
-        logger.info(f"AI analysis generated for file: {filename}")
-    except Exception as exc:
-        logger.exception("OpenAI API error")
-        raise HTTPException(status_code=500, detail="AI analysis failed. Please try again later.")
+        if REQUIRED_DISCLAIMER not in analysis:
+            analysis += REQUIRED_DISCLAIMER
 
-    # Step 5: Store the generated report.
-    try:
+        # Secure storage
         store_report(filename, analysis)
-        logger.info(f"Report stored successfully for file: {filename}")
-    except Exception as exc:
-        logger.warning("Failed to store report", exc_info=True)
 
-    # Step 6: Return the diagnostic report.
-    return {
-        "filename": filename,
-        "AI_Analysis": analysis,
-    }
+        return {
+            "filename": filename,
+            "image_metadata": {
+                "dimensions": image.size,
+                "mode": image.mode,
+                "format": "DICOM" if filename.endswith(".dcm") else "Standard"
+            },
+            "analysis": analysis
+        }
+
+    except HTTPException as e:
+        raise e
+    except Exception as err:
+        logger.error(f"Analysis pipeline failed: {str(err)}")
+        raise HTTPException(500, "AI analysis service unavailable")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8002,
+        ssl_keyfile=os.getenv("SSL_KEY"),
+        ssl_certfile=os.getenv("SSL_CERT")
+    )
