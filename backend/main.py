@@ -10,6 +10,7 @@ from PIL import Image, UnidentifiedImageError
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from differentials import medical_differentials, evidence_based_guidelines
 from pydicom.pixel_data_handlers import apply_modality_lut, apply_voi_lut
 
 # Enhanced medical knowledge integration
@@ -187,6 +188,12 @@ def redact_phi(text: str) -> str:
     for pattern in phi_patterns:
         text = re.sub(pattern, "[REDACTED]", text)
     return text
+# Example usage in analysis pipeline
+def generate_recommendations(condition: str):
+    for category in evidence_based_guidelines.values():
+        if condition in category:
+            return category[condition]["recommendations"]
+    return []
 
 @app.post("/analyze-image/")
 async def analyze_image(
