@@ -22,7 +22,7 @@ try:
     analytics = ImagingAnalytics()
 except ImportError:
     analytics = None
-
+app = FastAPI()
 # Configure enhanced logging
 logging.basicConfig(
     level=logging.INFO,
