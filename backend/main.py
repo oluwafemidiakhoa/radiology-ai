@@ -139,18 +139,40 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         raise HTTPException(500, "Image processing failed")
 
 def select_differentials(analysis: str):
-    """Selects appropriate differentials based on image analysis results."""
-    selected_categories = []
+    """Selects more specific conditions and their categories."""
+    analysis_lower = analysis.lower()
+    conditions = []
 
-    if "scoliosis" in analysis.lower():
-        selected_categories.append("Musculoskeletal")
-    elif "pneumonia" in analysis.lower():
-        selected_categories.append("Pulmonary")
-    elif "stroke" in analysis.lower():
-        selected_categories.append("Neurological")
-    # Add more rules as needed
+    if "pneumonia" in analysis_lower:
+        conditions.append({"keyword": "pneumonia", "category": "Pulmonary"})
+    if "fracture" in analysis_lower or "rib" in analysis_lower:
+        conditions.append({"keyword": "fracture", "category": "Musculoskeletal"})
+    if "cardiomegaly" in analysis_lower or "heart" in analysis_lower:
+        conditions.append({"keyword": "cardiomegaly", "category": "Cardiology"})
+    # Add more specific rules as needed
+    return conditions
 
-    return selected_categories
+def filter_guidelines(conditions, evidence_based_guidelines):
+    """Filter guidelines based on selected conditions."""
+    filtered_guidelines = {}
+
+    for condition in conditions:
+        category = condition["category"]
+        keyword = condition["keyword"]
+        #print(f"conditions {conditions} evid {evidence_based_guidelines.keys()}")
+        for org, topics in evidence_based_guidelines.items():
+            #print(f"topics is {topics.keys()} for {org}")
+            for topic, details in topics.items():
+                # Use 'keyword' to match related topics in guidelines
+                if keyword in topic.lower():
+                    # Initialize organization if not already present
+                    if org not in filtered_guidelines:
+                        filtered_guidelines[org] = {}
+                    
+                    # Add the relevant topic and its details
+                    filtered_guidelines[org][topic] = details
+        
+        return filtered_guidelines
 
 # ADDED LINES: MONGO_URI environment check (does not change existing code)
 MONGO_URI = os.getenv("MONGO_URI")
@@ -174,24 +196,38 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
 
 ############################################
 # New helper to incorporate differentials from our dictionary
-def incorporate_differentials(analysis_text: str, categories: list) -> str:
+def incorporate_differentials(analysis_text: str, conditions: list) -> str:
     """
     Appends additional dictionary data for detected categories to the analysis text.
     """
     additional_info = []
-    for cat in categories:
+
+    for condition in conditions:
+        category = condition["category"]
+        keyword = condition["keyword"]
+
         try:
-            cat_data = medical_differentials["Radiology"][cat]
-            info_lines = [f"**Additional {cat} Differentials:**"]
+            cat_data = medical_differentials["Radiology"][category]
+            info_lines = [f"**Potential {category} Considerations (Related to '{keyword}'):**"]  # More informative heading
+
             for subcat, details in cat_data.items():
                 if isinstance(details, dict):
-                    desc = details.get("Description", "No description available.")
-                    info_lines.append(f"- **{subcat}**: {desc}")
-                else:
-                    info_lines.append(f"- {subcat}: {details}")
+                    # Add more specific details based on available keys
+                    description = details.get("imaging_descriptors", "No description available.")
+                    risk_factors = details.get("risk_factors", "No risk factors listed.")
+                    clinical_correlations = details.get("clinical_diagnostic_correlations", "No correlations listed.")
+                    recommendations = details.get("recommendations", "No recommendations.")
+
+                    info_lines.append(f"\n- **{subcat}**:")
+                    info_lines.append(f"  - Imaging Descriptors: {description}")
+                    info_lines.append(f"  - Risk Factors: {risk_factors}")
+                    info_lines.append(f"  - Clinical Correlations: {clinical_correlations}")
+                    info_lines.append(f"  - Recommendations: {recommendations}")  # Add recommendations
+
             additional_info.append("\n".join(info_lines))
+
         except KeyError:
-            logger.warning(f"No dictionary entry found for category '{cat}'.")
+            logger.warning(f"No dictionary entry found for category '{category}'.")
             continue
 
     if additional_info:
@@ -200,11 +236,14 @@ def incorporate_differentials(analysis_text: str, categories: list) -> str:
 
 ############################################
 # New helper to incorporate evidence-based guidelines
-def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
+def incorporate_guidelines(analysis_text: str, guidelines: dict):
     """
-    Appends evidence-based guidelines to the analysis text.
+    Appends relevant evidence-based guidelines to the analysis text.
     """
     guideline_lines = []
+    if not guidelines:  # Check if guidelines is empty
+        return analysis_text  # Return original analysis if no relevant guidelines
+
     for org, topics in guidelines.items():
         guideline_lines.append(f"**{org} Guidelines:**")
         for topic, details in topics.items():
@@ -244,23 +283,28 @@ async def analyze_image(
 
         # Expanded system prompt including patient demographics and summary requirements
         system_prompt = (
-            "You are an advanced medical imaging AI assistant trained to analyze diagnostic images. "
-            "Your task is to generate a comprehensive board-level diagnostic report that includes the following sections, formatted in heading-level Markdown:\n\n"
+            "You are an expert medical imaging AI, trained to analyze diagnostic images and provide detailed diagnostic reports. "
+            "Your task is to generate a comprehensive, board-level diagnostic report with the following sections, formatted in heading-level Markdown:\n\n"
+
             "## Image Characteristics (Certainty: in percentage)\n"
-            "- Modality: [Identified imaging technique]\n"
-            "- Quality: [Technical assessment]\n"
-            "- Findings: [Visual observations]\n\n"
+            "- Modality: [Identified imaging technique, e.g., Chest X-ray, AP view]\n"
+            "- Quality: [Technical assessment of image quality, considering factors like positioning, exposure, and motion]\n"
+            "- Findings: [Detailed description of visual observations, including subtle findings.  Even in a normal image, describe the normal appearance of key structures (e.g., 'Clear lung fields, normal cardiac silhouette, absence of pleural effusions or pneumothorax, normal bony structures of the chest wall.')]\n\n"
+
             "## Pattern Recognition (Certainty: in percentage)\n"
-            "- Anatomical correlations\n"
-            "- Statistical prevalence\n"
-            "- Literature associations\n\n"
+            "- Anatomical correlations: [Describe the anatomical relationships observed, commenting on normal or abnormal alignments and proportions]\n"
+            "- Statistical prevalence: [Contextualize the findings based on the statistical prevalence of similar images in the relevant demographic (e.g., 'Normal chest X-ray appearance is common in healthy children.')]\n"
+            "- Literature associations: [Connect the findings to relevant medical literature, citing potential conditions or normal variants]\n\n"
+
             "## Clinical Considerations (Certainty: in percentage)\n"
-            "- Next-step imaging\n"
-            "- Common differentials\n\n"
+            "- Rule-Outs: [List potential conditions that are ruled out by the image findings, even if the image appears normal.  This demonstrates thoroughness (e.g., 'Pneumonia, pneumothorax, large pleural effusions, and significant bony abnormalities are not evident.')]\n"
+            "- Next-step imaging: [Suggest further imaging only if clinically warranted, providing specific justifications (e.g., 'No further imaging required unless clinical symptoms worsen or new symptoms develop.')]\n\n"
+
             "## Summary\n"
             "- Provide a concise bullet-point overview of key findings and diagnostic suggestions.\n\n"
-            "If available, incorporate patient demographics (age, sex) into your analysis. "
-            "Base your response solely on visual features and provide a final analysis without additional commentary."
+
+            "If available, incorporate patient demographics (age, sex) into your analysis to refine your assessment. "
+            "Base your response solely on visual features. Avoid direct medical advice; focus on image interpretation."
         )
 
         messages = [
@@ -284,7 +328,7 @@ async def analyze_image(
                 model="gpt-4o",
                 messages=messages,
                 max_tokens=2500,
-                temperature=0.3,
+                temperature=0.2,
                 top_p=0.9,
                 frequency_penalty=0.5,
                 presence_penalty=0.4
@@ -295,11 +339,12 @@ async def analyze_image(
         analysis = reformat_analysis(analysis, disclaimers=True)
 
         # Incorporate differentials from the medical_differentials dictionary
-        detected_categories = select_differentials(analysis)
-        analysis = incorporate_differentials(analysis, detected_categories)
+        detected_conditions = select_differentials(analysis)
+        analysis = incorporate_differentials(analysis, detected_conditions)
 
         # Incorporate evidence-based guidelines into the final report
-        analysis = incorporate_guidelines(analysis, evidence_based_guidelines)
+        filtered_guidelines = filter_guidelines(detected_conditions, evidence_based_guidelines)
+        analysis = incorporate_guidelines(analysis, filtered_guidelines)
 
         # Securely store the analysis report
         if store_report is None:
