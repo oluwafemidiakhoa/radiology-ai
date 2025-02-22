@@ -17,7 +17,7 @@ load_dotenv(dotenv_path=dotenv_path)  # Load the variables
 
 # Get the MongoDB URI components from environment variables
 MONGO_USERNAME = os.getenv("MONGO_USERNAME", "ethagagroalliedltd")  # Default username
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")  # Required password
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "hV5wlRUhbvh9qhZt")  # Required password
 MONGO_CLUSTER = os.getenv("MONGO_CLUSTER", "radiologyal.1n3v2.mongodb.net")  # Default cluster
 
 # Construct the MongoDB URI
