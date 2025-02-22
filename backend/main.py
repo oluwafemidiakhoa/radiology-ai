@@ -10,7 +10,6 @@ from PIL import Image, UnidentifiedImageError
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from differentials import medical_differentials, evidence_based_guidelines
 from pydicom.pixel_data_handlers import apply_modality_lut, apply_voi_lut
 
 # Enhanced medical knowledge integration
@@ -53,41 +52,6 @@ DICOM_CONFIG = {
     "min_resolution": 512,
     "max_file_size": 1024 * 1024 * 100  # 100MB
 }
-
-app = FastAPI()
-
-# Dummy AI client definition added to resolve 'client' not defined
-class DummyAIClient:
-    class Chat:
-        async def completions_create(self, model, messages, max_tokens, temperature, response_format):
-            import json
-            dummy_report = {
-                "image_characteristics": {
-                    "title": "Image Characteristics",
-                    "certainty": 95,
-                    "findings": ["Finding 1", "Finding 2"]
-                },
-                "pattern_recognition": {
-                    "title": "Pattern Recognition",
-                    "certainty": 90,
-                    "findings": ["Pattern 1", "Pattern 2"]
-                },
-                "clinical_considerations": {
-                    "title": "Clinical Considerations",
-                    "certainty": 85,
-                    "findings": ["Consideration 1", "Consideration 2"],
-                    "recommendations": ["Recommendation 1", "Recommendation 2"]
-                }
-            }
-            class DummyChoice:
-                def __init__(self, content):
-                    self.message = type("DummyMessage", (), {"content": json.dumps(dummy_report)})
-            class DummyResponse:
-                choices = [DummyChoice(json.dumps(dummy_report))]
-            return DummyResponse()
-    chat = Chat()
-
-client = DummyAIClient()
 
 class AdvancedDICOMProcessor:
     """Advanced DICOM processing with modality-specific optimizations"""
@@ -147,7 +111,7 @@ class AIDiagnosticEngine:
         messages = self._create_message_payload(system_prompt, image_data)
         
         try:
-            response = await client.chat.completions_create(
+            response = await client.chat.completions.create(
                 model="gpt-4-medical",
                 messages=messages,
                 max_tokens=2500,
@@ -174,13 +138,6 @@ Generate report with:
 
 JSON format:"""
         return prompt
-
-    def _create_message_payload(self, system_prompt: str, image_data: str) -> List[Dict[str, str]]:
-        """Create message payload for AI analysis"""
-        return [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": image_data}
-        ]
 
     def _process_response(self, response: str) -> str:
         """Process and validate AI response"""
@@ -230,20 +187,6 @@ def redact_phi(text: str) -> str:
     for pattern in phi_patterns:
         text = re.sub(pattern, "[REDACTED]", text)
     return text
-
-def encode_image_to_data_url(image: Image.Image) -> str:
-    """Convert a PIL Image to a base64 encoded data URL."""
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return f"data:image/png;base64,{img_str}"
-
-# Example usage in analysis pipeline
-def generate_recommendations(condition: str):
-    for category in evidence_based_guidelines.values():
-        if condition in category:
-            return category[condition]["recommendations"]
-    return []
 
 @app.post("/analyze-image/")
 async def analyze_image(
