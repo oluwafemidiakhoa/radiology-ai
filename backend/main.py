@@ -159,17 +159,11 @@ def filter_guidelines(conditions, evidence_based_guidelines):
     for condition in conditions:
         category = condition["category"]
         keyword = condition["keyword"]
-        #print(f"conditions {conditions} evid {evidence_based_guidelines.keys()}")
         for org, topics in evidence_based_guidelines.items():
-            #print(f"topics is {topics.keys()} for {org}")
             for topic, details in topics.items():
-                # Use 'keyword' to match related topics in guidelines
                 if keyword in topic.lower():
-                    # Initialize organization if not already present
                     if org not in filtered_guidelines:
                         filtered_guidelines[org] = {}
-                    
-                    # Add the relevant topic and its details
                     filtered_guidelines[org][topic] = details
         
         return filtered_guidelines
@@ -179,8 +173,6 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
 
-############################################
-# New advanced helper to reformat AI text
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
     Processes the AI's raw analysis to standardize headings, bullet points,
@@ -194,8 +186,6 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
 
     return formatted_text
 
-############################################
-# New helper to incorporate differentials from our dictionary
 def incorporate_differentials(analysis_text: str, conditions: list) -> str:
     """
     Appends additional dictionary data for detected categories to the analysis text.
@@ -208,11 +198,10 @@ def incorporate_differentials(analysis_text: str, conditions: list) -> str:
 
         try:
             cat_data = medical_differentials["Radiology"][category]
-            info_lines = [f"**Potential {category} Considerations (Related to '{keyword}'):**"]  # More informative heading
+            info_lines = [f"**Potential {category} Considerations (Related to '{keyword}'):**"]
 
             for subcat, details in cat_data.items():
                 if isinstance(details, dict):
-                    # Add more specific details based on available keys
                     description = details.get("imaging_descriptors", "No description available.")
                     risk_factors = details.get("risk_factors", "No risk factors listed.")
                     clinical_correlations = details.get("clinical_diagnostic_correlations", "No correlations listed.")
@@ -222,7 +211,7 @@ def incorporate_differentials(analysis_text: str, conditions: list) -> str:
                     info_lines.append(f"  - Imaging Descriptors: {description}")
                     info_lines.append(f"  - Risk Factors: {risk_factors}")
                     info_lines.append(f"  - Clinical Correlations: {clinical_correlations}")
-                    info_lines.append(f"  - Recommendations: {recommendations}")  # Add recommendations
+                    info_lines.append(f"  - Recommendations: {recommendations}")
 
             additional_info.append("\n".join(info_lines))
 
@@ -234,15 +223,13 @@ def incorporate_differentials(analysis_text: str, conditions: list) -> str:
         return analysis_text + "\n\n" + "\n\n".join(additional_info)
     return analysis_text
 
-############################################
-# New helper to incorporate evidence-based guidelines
 def incorporate_guidelines(analysis_text: str, guidelines: dict):
     """
     Appends relevant evidence-based guidelines to the analysis text.
     """
     guideline_lines = []
-    if not guidelines:  # Check if guidelines is empty
-        return analysis_text  # Return original analysis if no relevant guidelines
+    if not guidelines:
+        return analysis_text
 
     for org, topics in guidelines.items():
         guideline_lines.append(f"**{org} Guidelines:**")
@@ -259,8 +246,6 @@ def incorporate_guidelines(analysis_text: str, guidelines: dict):
         guidelines_text = "\n".join(guideline_lines)
         return analysis_text + "\n\n" + guidelines_text
     return analysis_text
-
-############################################
 
 @app.post("/analyze-image/")
 async def analyze_image(
@@ -281,30 +266,23 @@ async def analyze_image(
         # Process and validate image
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Expanded system prompt including patient demographics and summary requirements
+        # Modified system prompt to enforce direct analysis
         system_prompt = (
-            "You are an expert medical imaging AI, trained to analyze diagnostic images and provide detailed diagnostic reports. "
-            "Your task is to generate a comprehensive, board-level diagnostic report with the following sections, formatted in heading-level Markdown:\n\n"
-
-            "## Image Characteristics (Certainty: in percentage)\n"
-            "- Modality: [Identified imaging technique, e.g., Chest X-ray, AP view]\n"
-            "- Quality: [Technical assessment of image quality, considering factors like positioning, exposure, and motion]\n"
-            "- Findings: [Detailed description of visual observations, including subtle findings.  Even in a normal image, describe the normal appearance of key structures (e.g., 'Clear lung fields, normal cardiac silhouette, absence of pleural effusions or pneumothorax, normal bony structures of the chest wall.')]\n\n"
-
-            "## Pattern Recognition (Certainty: in percentage)\n"
-            "- Anatomical correlations: [Describe the anatomical relationships observed, commenting on normal or abnormal alignments and proportions]\n"
-            "- Statistical prevalence: [Contextualize the findings based on the statistical prevalence of similar images in the relevant demographic (e.g., 'Normal chest X-ray appearance is common in healthy children.')]\n"
-            "- Literature associations: [Connect the findings to relevant medical literature, citing potential conditions or normal variants]\n\n"
-
-            "## Clinical Considerations (Certainty: in percentage)\n"
-            "- Rule-Outs: [List potential conditions that are ruled out by the image findings, even if the image appears normal.  This demonstrates thoroughness (e.g., 'Pneumonia, pneumothorax, large pleural effusions, and significant bony abnormalities are not evident.')]\n"
-            "- Next-step imaging: [Suggest further imaging only if clinically warranted, providing specific justifications (e.g., 'No further imaging required unless clinical symptoms worsen or new symptoms develop.')]\n\n"
-
-            "## Summary\n"
-            "- Provide a concise bullet-point overview of key findings and diagnostic suggestions.\n\n"
-
-            "If available, incorporate patient demographics (age, sex) into your analysis to refine your assessment. "
-            "Base your response solely on visual features. Avoid direct medical advice; focus on image interpretation."
+            "You are a expert medical imaging analysis system. Generate detailed diagnostic observations based on these requirements:\n\n"
+            "1. Directly analyze all visual patterns in the provided medical image\n"
+            "2. Structure findings in this exact format:\n"
+            "## Image Technical Assessment\n"
+            "- Modality and view identification\n"
+            "- Quality evaluation of anatomical visualization\n\n"
+            "## Visual Pattern Analysis\n"
+            "- Systematic description of normal/abnormal findings\n"
+            "- Anatomical localization of observations\n"
+            "- Quantitative measurements when applicable\n\n"
+            "## Diagnostic Considerations\n"
+            "- Probable clinical correlations\n"
+            "- Differential diagnosis hierarchy\n"
+            "- Recommended next steps for verification\n\n"
+            "Omit any statements about inability to analyze. Focus exclusively on image-derived findings."
         )
 
         messages = [
@@ -312,7 +290,7 @@ async def analyze_image(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Analyze this medical image for clinically relevant visual patterns."},
+                    {"type": "text", "text": "Perform comprehensive analysis of this medical image"},
                     {
                         "type": "image_url",
                         "image_url": {"url": data_url, "detail": "high"}
@@ -335,14 +313,14 @@ async def analyze_image(
             )
             analysis = response.choices[0].message.content
 
-        # Reformat analysis text to standardize formatting and append disclaimer
+        # Reformat analysis text
         analysis = reformat_analysis(analysis, disclaimers=True)
 
-        # Incorporate differentials from the medical_differentials dictionary
+        # Incorporate clinical data
         detected_conditions = select_differentials(analysis)
         analysis = incorporate_differentials(analysis, detected_conditions)
 
-        # Incorporate evidence-based guidelines into the final report
+        # Add evidence-based guidelines
         filtered_guidelines = filter_guidelines(detected_conditions, evidence_based_guidelines)
         analysis = incorporate_guidelines(analysis, filtered_guidelines)
 
