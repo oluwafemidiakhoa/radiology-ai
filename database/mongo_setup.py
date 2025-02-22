@@ -1,18 +1,35 @@
-from pymongo import MongoClient
 import os
+import logging
+from pymongo import MongoClient
 
-# Get MongoDB URI from environment or use default
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("MongoSetup")
+
+# Read MONGO_URI from environment or default to localhost
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client["radiology_db"]
+DB_NAME = "radiology_db"
+COLLECTION_NAME = "ai_reports"
+
+def get_mongo_client():
+    try:
+        client = MongoClient(MONGO_URI)
+        return client
+    except Exception as e:
+        logger.exception("Failed to connect to MongoDB.")
+        raise
 
 def setup_database():
-    # Create the collection if it doesn't already exist
-    if "ai_reports" not in db.list_collection_names():
-        db.create_collection("ai_reports")
-        print("Created collection: ai_reports")
+    client = get_mongo_client()
+    db = client[DB_NAME]
+
+    if COLLECTION_NAME not in db.list_collection_names():
+        db.create_collection(COLLECTION_NAME)
+        logger.info(f"Created collection: {COLLECTION_NAME}")
     else:
-        print("Collection ai_reports already exists.")
+        logger.info(f"Collection '{COLLECTION_NAME}' already exists.")
 
 if __name__ == "__main__":
     setup_database()
