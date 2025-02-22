@@ -147,6 +147,11 @@ def select_differentials(analysis):
 
     return selected_categories
 
+# ADDED LINES: MONGO_URI environment check (does not change existing code)
+MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
+
 @app.post("/analyze-image/")
 async def analyze_image(
         file: UploadFile = File(...),
