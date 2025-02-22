@@ -62,13 +62,13 @@ MIN_RESOLUTION = 512
 REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis - Must be validated by board-certified radiologist*"
 
 def encode_image_to_data_url(image: Image.Image) -> str:
-    """Optimized image encoding with quality control"""
+    """Optimized image encoding with quality control."""
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
 
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
-    """Validate essential DICOM metadata"""
+    """Validate essential DICOM metadata."""
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing_tags = [tag for tag in required_tags if tag not in dicom_obj]
 
@@ -77,7 +77,7 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
         raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
 
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
-    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
+    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing."""
     try:
         if filename.endswith(".dcm"):
             try:
@@ -85,11 +85,16 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 validate_dicom_metadata(dicom_obj)
 
                 pixel_array = dicom_obj.pixel_array
-                norm_array = ((pixel_array - np.min(pixel_array)) / (np.max(pixel_array) - np.min(pixel_array)) * 255).astype(np.uint8)
+                norm_array = (
+                    (pixel_array - np.min(pixel_array)) 
+                    / (np.max(pixel_array) - np.min(pixel_array)) * 255
+                ).astype(np.uint8)
                 image = Image.fromarray(norm_array)
 
                 if "WindowCenter" in dicom_obj:
-                    logger.info(f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
+                    logger.info(
+                        f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}"
+                    )
 
             except pydicom.errors.InvalidDicomError as e:
                 logger.error(f"Invalid DICOM file: {e}")
@@ -115,7 +120,10 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
 
         # Resolution check and resizing (preserving aspect ratio)
         if min(image.size) < MIN_RESOLUTION:
-            logger.warning(f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio.")
+            logger.warning(
+                f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. "
+                "Resizing image while preserving aspect ratio."
+            )
             width, height = image.size
             if width < height:
                 new_width = MIN_RESOLUTION
@@ -128,7 +136,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         return image, encode_image_to_data_url(image)
 
     except HTTPException as e:
-        raise e  # Re-raise HTTPExceptions
+        raise e
     except Exception as err:
         logger.error(f"Unexpected processing error: {str(err)}")
         raise HTTPException(500, "Image processing failed")
@@ -152,6 +160,31 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
 
+########################################
+# New advanced helper to reformat AI text
+def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
+    """
+    Further processes the AI's raw analysis to unify headings, bullet points,
+    and optionally append disclaimers or additional categories.
+    """
+    # Optionally append disclaimers
+    if disclaimers and REQUIRED_DISCLAIMER not in analysis_text:
+        analysis_text += REQUIRED_DISCLAIMER
+
+    # For demonstration, we can parse out lines like "Findings:" or "Modality:"
+    # and ensure they're bold or on separate lines, but here is a minimal approach:
+    lines = analysis_text.split("\n")
+    formatted_lines = []
+
+    for line in lines:
+        # Example of ensuring lines starting with "-" have bullet formatting
+        if line.strip().startswith("-"):
+            formatted_lines.append(f"- {line.strip()[1:].strip()}")
+        else:
+            formatted_lines.append(line)
+
+    return "\n".join(formatted_lines)
+
 @app.post("/analyze-image/")
 async def analyze_image(
         file: UploadFile = File(...),
@@ -160,6 +193,12 @@ async def analyze_image(
 ) -> dict:
     """Enhanced image analysis endpoint"""
     try:
+        # Log patient info if provided
+        if age is not None:
+            logger.info(f"Patient age provided: {age}")
+        if sex is not None:
+            logger.info(f"Patient sex provided: {sex}")
+
         raw_data = await file.read()
         filename = file.filename.lower()
 
@@ -170,26 +209,26 @@ async def analyze_image(
         system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging.
 Your role is to:
 1. Describe anatomical features and imaging artifacts
-            2. Identify statistically significant visual patterns
-            3. Compare findings to typical radiographic presentations
-            4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
-            5. Provide how much it certain.
+2. Identify statistically significant visual patterns
+3. Compare findings to typical radiographic presentations
+4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
+5. Provide how much it certain.
 
-            Format response using:
-            **Image Characteristics (Certainty: in percentage)**
-            - Modality: [Identified imaging technique]
-            - Quality: [Technical assessment]
-            - Findings: [Visual observations]
+Format response using:
+**Image Characteristics (Certainty: in percentage)**
+- Modality: [Identified imaging technique]
+- Quality: [Technical assessment]
+- Findings: [Visual observations]
 
-            **Pattern Recognition (Certainty: in percentage)**
-            - Anatomical correlations
-            - Statistical prevalence
-            - Literature associations
+**Pattern Recognition (Certainty: in percentage)**
+- Anatomical correlations
+- Statistical prevalence
+- Literature associations
 
-            **Clinical Considerations (Certainty: in percentage)**
-            - Next-step imaging
-            - Common differentials
-            - AI limitations disclaimer"""
+**Clinical Considerations (Certainty: in percentage)**
+- Next-step imaging
+- Common differentials
+- AI limitations disclaimer"""
 
         messages = [
             {
@@ -212,9 +251,9 @@ Your role is to:
         ]
         if client is None:
             logger.warning("OpenAI client not initialized, skipping analysis.")
-            analysis = "AI analysis service unavailable." #Provide analysis when the openai fails.
+            analysis = "AI analysis service unavailable."
         else:
-        # Optimized API parameters
+            # Optimized API parameters
             response = await client.chat.completions.create(
                 model="gpt-4o",
                 messages=messages,
@@ -224,25 +263,32 @@ Your role is to:
                 frequency_penalty=0.5,
                 presence_penalty=0.4
             )
-
-            # Post-process response
             analysis = response.choices[0].message.content
+
+        # Insert disclaimers and minor bullet formatting
+        analysis = reformat_analysis(analysis, disclaimers=True)
+
+        # Optionally, use the 'select_differentials' function to identify categories
+        differentials_list = select_differentials(analysis)
+        if differentials_list:
+            # Append to analysis text
+            analysis += "\n\n**Possible Differential Categories:** " + ", ".join(differentials_list)
 
         # Secure storage
         if store_report is None:
-             logger.warning("store_report function not initialized, skipping report storage.")
+            logger.warning("store_report function not initialized, skipping report storage.")
         else:
-            store_report(filename, analysis) # Store the raw analysis
+            store_report(filename, analysis)  # Store the raw or post-processed analysis
 
-        image_metadata= {
-                "dimensions": image.size,
-                "mode": image.mode,
-                "format": "DICOM" if filename.endswith(".dcm") else "Standard"
-            }
+        image_metadata = {
+            "dimensions": image.size,
+            "mode": image.mode,
+            "format": "DICOM" if filename.endswith(".dcm") else "Standard"
+        }
         response_data = {
             "filename": filename,
             "image_metadata": image_metadata,
-            "analysis": analysis # use the raw string
+            "analysis": analysis  # Return the post-processed text
         }
         return JSONResponse(content=response_data)
 
