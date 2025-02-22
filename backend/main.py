@@ -24,7 +24,17 @@ try:
 except ImportError as e:
     logging.error(f"Error importing config: {e}")
     OPENAI_API_KEY = None  # Or handle the missing config differently
-    exit() # Stop execution if the config is not working.
+    exit()  # Stop execution if the config is not working.
+
+# Existing differentials code
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
+
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
+
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
 
 from differentials import medical_differentials
 
@@ -61,14 +71,16 @@ app.add_middleware(
 MIN_RESOLUTION = 512
 REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis - Must be validated by board-certified radiologist*"
 
+
 def encode_image_to_data_url(image: Image.Image) -> str:
-    """Optimized image encoding with quality control."""
+    """Optimized image encoding with quality control"""
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
 
+
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
-    """Validate essential DICOM metadata."""
+    """Validate essential DICOM metadata"""
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing_tags = [tag for tag in required_tags if tag not in dicom_obj]
 
@@ -76,8 +88,9 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
         logger.error(f"Missing required DICOM tags: {missing_tags}")
         raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
 
+
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
-    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing."""
+    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
     try:
         if filename.endswith(".dcm"):
             try:
@@ -86,15 +99,14 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
 
                 pixel_array = dicom_obj.pixel_array
                 norm_array = (
-                    (pixel_array - np.min(pixel_array)) 
-                    / (np.max(pixel_array) - np.min(pixel_array)) * 255
+                    (pixel_array - np.min(pixel_array))
+                    / (np.max(pixel_array) - np.min(pixel_array))
+                    * 255
                 ).astype(np.uint8)
                 image = Image.fromarray(norm_array)
 
                 if "WindowCenter" in dicom_obj:
-                    logger.info(
-                        f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}"
-                    )
+                    logger.info(f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
 
             except pydicom.errors.InvalidDicomError as e:
                 logger.error(f"Invalid DICOM file: {e}")
@@ -105,7 +117,6 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             except Exception as e:
                 logger.error(f"DICOM processing error: {e}")
                 raise HTTPException(500, "DICOM processing failed")
-
         else:
             try:
                 image = Image.open(io.BytesIO(raw_data))
@@ -121,8 +132,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         # Resolution check and resizing (preserving aspect ratio)
         if min(image.size) < MIN_RESOLUTION:
             logger.warning(
-                f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. "
-                "Resizing image while preserving aspect ratio."
+                f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio."
             )
             width, height = image.size
             if width < height:
@@ -141,10 +151,12 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         logger.error(f"Unexpected processing error: {str(err)}")
         raise HTTPException(500, "Image processing failed")
 
-def select_differentials(analysis):
+
+def select_differentials(analysis: str):
     """Selects appropriate differentials based on image analysis results."""
     selected_categories = []
 
+    # Basic keyword detection for categories
     if "scoliosis" in analysis.lower():
         selected_categories.append("Musculoskeletal")
     elif "pneumonia" in analysis.lower():
@@ -160,30 +172,47 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
 
-########################################
-# New advanced helper to reformat AI text
-def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
+
+############################################
+# New advanced function to incorporate dictionary data
+def incorporate_differentials(analysis_text: str, categories: list) -> str:
     """
-    Further processes the AI's raw analysis to unify headings, bullet points,
-    and optionally append disclaimers or additional categories.
+    Incorporates advanced details from medical_differentials into the analysis text
+    for each detected category. This function demonstrates how we might fetch
+    relevant dictionary entries and append them to the final analysis.
     """
-    # Optionally append disclaimers
-    if disclaimers and REQUIRED_DISCLAIMER not in analysis_text:
-        analysis_text += REQUIRED_DISCLAIMER
+    # We'll build a block of additional info from the dictionary for the recognized categories
+    additional_info = []
 
-    # For demonstration, we can parse out lines like "Findings:" or "Modality:"
-    # and ensure they're bold or on separate lines, but here is a minimal approach:
-    lines = analysis_text.split("\n")
-    formatted_lines = []
+    for cat in categories:
+        # Hard-coded top-level "Radiology" for these categories, as an example
+        # In real usage, we'd map "Pulmonary" -> medical_differentials["Radiology"]["Pulmonary"]
+        # or parse subcategories more thoroughly.
+        try:
+            # For instance, if cat is "Pulmonary":
+            cat_data = medical_differentials["Radiology"][cat]
+            # We create a short summary
+            info_lines = [f"**Additional {cat} Differentials from dictionary:**"]
+            for subcat, details in cat_data.items():
+                if isinstance(details, dict):
+                    sub_desc = details.get("Description", "")
+                    info_lines.append(f"- **{subcat}**: {sub_desc}")
+                else:
+                    info_lines.append(f"- {subcat}: {details}")
+            additional_info.append("\n".join(info_lines))
+        except KeyError:
+            # If the category isn't in the dictionary or the structure is mismatched
+            logger.warning(f"No dictionary entry found for {cat} or structure mismatch.")
+            pass
 
-    for line in lines:
-        # Example of ensuring lines starting with "-" have bullet formatting
-        if line.strip().startswith("-"):
-            formatted_lines.append(f"- {line.strip()[1:].strip()}")
-        else:
-            formatted_lines.append(line)
+    if additional_info:
+        joined = "\n\n".join(additional_info)
+        return analysis_text + "\n\n" + joined
+    else:
+        return analysis_text
 
-    return "\n".join(formatted_lines)
+############################################
+
 
 @app.post("/analyze-image/")
 async def analyze_image(
@@ -193,7 +222,6 @@ async def analyze_image(
 ) -> dict:
     """Enhanced image analysis endpoint"""
     try:
-        # Log patient info if provided
         if age is not None:
             logger.info(f"Patient age provided: {age}")
         if sex is not None:
@@ -265,20 +293,20 @@ Format response using:
             )
             analysis = response.choices[0].message.content
 
-        # Insert disclaimers and minor bullet formatting
-        analysis = reformat_analysis(analysis, disclaimers=True)
+        # Insert disclaimers if not already present
+        if REQUIRED_DISCLAIMER not in analysis:
+            analysis += REQUIRED_DISCLAIMER
 
-        # Optionally, use the 'select_differentials' function to identify categories
-        differentials_list = select_differentials(analysis)
-        if differentials_list:
-            # Append to analysis text
-            analysis += "\n\n**Possible Differential Categories:** " + ", ".join(differentials_list)
+        # Identify relevant categories from the analysis text
+        detected_categories = select_differentials(analysis)
+        # Incorporate advanced dictionary data for those categories
+        analysis = incorporate_differentials(analysis, detected_categories)
 
         # Secure storage
         if store_report is None:
             logger.warning("store_report function not initialized, skipping report storage.")
         else:
-            store_report(filename, analysis)  # Store the raw or post-processed analysis
+            store_report(filename, analysis)  # Store the (possibly updated) analysis
 
         image_metadata = {
             "dimensions": image.size,
@@ -288,7 +316,7 @@ Format response using:
         response_data = {
             "filename": filename,
             "image_metadata": image_metadata,
-            "analysis": analysis  # Return the post-processed text
+            "analysis": analysis
         }
         return JSONResponse(content=response_data)
 
@@ -297,6 +325,7 @@ Format response using:
     except Exception as err:
         logger.error(f"Analysis pipeline failed: {str(err)}")
         raise HTTPException(500, "AI analysis service unavailable")
+
 
 if __name__ == "__main__":
     import uvicorn
