@@ -2,18 +2,31 @@ import os
 import io
 import base64
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import pydicom
 from PIL import Image, UnidentifiedImageError
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # HIPAA-compliant report storage
-from models import store_report
-from config import OPENAI_API_KEY
+try:
+    from models import store_report
+except ImportError as e:
+    logging.error(f"Error importing models: {e}")
+    store_report = None  # Or define a dummy function
+
+try:
+    from config import OPENAI_API_KEY
+except ImportError as e:
+    logging.error(f"Error importing config: {e}")
+    OPENAI_API_KEY = None  # Or handle the missing config differently
+    exit() # Stop execution if the config is not working.
+
+from differentials import medical_differentials
 
 # Enhanced logging configuration
 logging.basicConfig(
@@ -23,9 +36,12 @@ logging.basicConfig(
 logger = logging.getLogger("ProdMedicalImagingAI")
 
 # Asynchronous OpenAI client
-from openai import AsyncOpenAI
-
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
+try:
+    from openai import AsyncOpenAI
+    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+except ImportError as e:
+    logging.error(f"Error importing or initializing OpenAI: {e}")
+    client = None
 
 app = FastAPI(
     title="Medical Imaging AI",
@@ -55,12 +71,12 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """Validate essential DICOM metadata"""
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing_tags = [tag for tag in required_tags if tag not in dicom_obj]
-    
+
     if missing_tags:
         logger.error(f"Missing required DICOM tags: {missing_tags}")
         raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
 
-def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
+async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
     try:
         if filename.endswith(".dcm"):
@@ -117,39 +133,58 @@ def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, 
         logger.error(f"Unexpected processing error: {str(err)}")
         raise HTTPException(500, "Image processing failed")
 
+def select_differentials(analysis):
+    """Selects appropriate differentials based on image analysis results."""
+    selected_categories = []
+
+    if "scoliosis" in analysis.lower():
+        selected_categories.append("Musculoskeletal")
+    elif "pneumonia" in analysis.lower():
+        selected_categories.append("Pulmonary")
+    elif "stroke" in analysis.lower():
+        selected_categories.append("Neurological")
+    # Add more rules as needed
+
+    return selected_categories
+
 @app.post("/analyze-image/")
-async def analyze_image(file: UploadFile = File(...)) -> dict:
+async def analyze_image(
+        file: UploadFile = File(...),
+        age: Optional[int] = Query(None, description="Patient's age"),
+        sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
+) -> dict:
     """Enhanced image analysis endpoint"""
     try:
         raw_data = await file.read()
         filename = file.filename.lower()
-        
+
         # Process and validate image
-        image, data_url = process_medical_image(raw_data, filename)
-        
+        image, data_url = await process_medical_image(raw_data, filename)
+
         # System prompt engineering
-        system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging. 
+        system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging.
 Your role is to:
 1. Describe anatomical features and imaging artifacts
-2. Identify statistically significant visual patterns
-3. Compare findings to typical radiographic presentations
-4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
+            2. Identify statistically significant visual patterns
+            3. Compare findings to typical radiographic presentations
+            4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
+            5. Provide how much it certain.
 
-Format response using:
-**Image Characteristics**
-- Modality: [Identified imaging technique]
-- Quality: [Technical assessment]
-- Findings: [Visual observations]
+            Format response using:
+            **Image Characteristics (Certainty: in percentage)**
+            - Modality: [Identified imaging technique]
+            - Quality: [Technical assessment]
+            - Findings: [Visual observations]
 
-**Pattern Recognition**
-- Anatomical correlations
-- Statistical prevalence
-- Literature associations
+            **Pattern Recognition (Certainty: in percentage)**
+            - Anatomical correlations
+            - Statistical prevalence
+            - Literature associations
 
-**Clinical Considerations**
-- Next-step imaging
-- Common differentials
-- AI limitations disclaimer"""
+            **Clinical Considerations (Certainty: in percentage)**
+            - Next-step imaging
+            - Common differentials
+            - AI limitations disclaimer"""
 
         messages = [
             {
@@ -170,35 +205,41 @@ Format response using:
                 ]
             }
         ]
-
+        if client is None:
+            logger.warning("OpenAI client not initialized, skipping analysis.")
+            analysis = "AI analysis service unavailable." #Provide analysis when the openai fails.
+        else:
         # Optimized API parameters
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            max_tokens=2000,
-            temperature=0.3,
-            top_p=0.9,
-            frequency_penalty=0.5,
-            presence_penalty=0.4
-        )
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                max_tokens=2000,
+                temperature=0.3,
+                top_p=0.9,
+                frequency_penalty=0.5,
+                presence_penalty=0.4
+            )
 
-        # Post-process response
-        analysis = response.choices[0].message.content
-        if REQUIRED_DISCLAIMER not in analysis:
-            analysis += REQUIRED_DISCLAIMER
+            # Post-process response
+            analysis = response.choices[0].message.content
 
         # Secure storage
-        store_report(filename, analysis)
+        if store_report is None:
+             logger.warning("store_report function not initialized, skipping report storage.")
+        else:
+            store_report(filename, analysis) # Store the raw analysis
 
-        return {
-            "filename": filename,
-            "image_metadata": {
+        image_metadata= {
                 "dimensions": image.size,
                 "mode": image.mode,
                 "format": "DICOM" if filename.endswith(".dcm") else "Standard"
-            },
-            "analysis": analysis
+            }
+        response_data = {
+            "filename": filename,
+            "image_metadata": image_metadata,
+            "analysis": analysis # use the raw string
         }
+        return JSONResponse(content=response_data)
 
     except HTTPException as e:
         raise e
