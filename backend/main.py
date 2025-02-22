@@ -2,62 +2,247 @@ import os
 import io
 import base64
 import logging
-from typing import Tuple, Optional
-
 import numpy as np
 import pydicom
+import re
+from typing import Tuple, Optional, Dict, List
 from PIL import Image, UnidentifiedImageError
-
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydicom.pixel_data_handlers import apply_modality_lut, apply_voi_lut
 
-# HIPAA-compliant report storage
+# Enhanced medical knowledge integration
+from differentials import medical_differentials, evidence_based_guidelines
+
+# Advanced analytics module
 try:
-    from models import store_report
-except ImportError as e:
-    logging.error(f"Error importing models: {e}")
-    store_report = None  # Or define a dummy function
+    from analytics import ImagingAnalytics
+    analytics = ImagingAnalytics()
+except ImportError:
+    analytics = None
 
-try:
-    from config import OPENAI_API_KEY
-except ImportError as e:
-    logging.error(f"Error importing config: {e}")
-    OPENAI_API_KEY = None  # Or handle the missing config differently
-    exit()  # Stop execution if the config is not working.
-
-# Existing differentials code
-from differentials import medical_differentials
-from differentials import medical_differentials as dx_dict  # Alias for clarity
-
-from differentials import medical_differentials
-from differentials import medical_differentials as dx_dict  # Alias for clarity
-
-from differentials import medical_differentials
-from differentials import medical_differentials as dx_dict  # Alias for clarity
-
-from differentials import medical_differentials
-
-# Enhanced logging configuration
+# Configure enhanced logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("medical_imaging.log"),
+        logging.StreamHandler()
+    ]
 )
-logger = logging.getLogger("ProdMedicalImagingAI")
+logger = logging.getLogger("AdvancedMedicalImagingAI")
 
-# Asynchronous OpenAI client
-try:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-except ImportError as e:
-    logging.error(f"Error importing or initializing OpenAI: {e}")
-    client = None
+# Advanced DICOM configuration
+DICOM_CONFIG = {
+    "modality_settings": {
+        "CT": {
+            "window_presets": {
+                "lung": {"center": -600, "width": 1500},
+                "mediastinum": {"center": 40, "width": 400}
+            },
+            "rescale": {"slope": 1, "intercept": -1024}
+        },
+        "MR": {
+            "window_presets": {
+                "brain": {"center": 0, "width": 500}
+            }
+        }
+    },
+    "min_resolution": 512,
+    "max_file_size": 1024 * 1024 * 100  # 100MB
+}
 
-app = FastAPI(
-    title="Medical Imaging AI",
-    description="Advanced diagnostic pattern analysis for medical imaging",
-    version="2.1.0",
-)
+class AdvancedDICOMProcessor:
+    """Advanced DICOM processing with modality-specific optimizations"""
+    
+    def __init__(self, dicom_obj: pydicom.Dataset):
+        self.dicom = dicom_obj
+        self.modality = dicom_obj.Modality
+        self.anatomical_region = getattr(dicom_obj, 'BodyPartExamined', 'Unknown')
+        
+    def apply_advanced_processing(self) -> np.ndarray:
+        """Perform modality-specific image optimization"""
+        try:
+            pixel_array = apply_modality_lut(self.dicom.pixel_array, self.dicom)
+            pixel_array = apply_voi_lut(pixel_array, self.dicom)
+            
+            if self.modality in DICOM_CONFIG["modality_settings"]:
+                settings = DICOM_CONFIG["modality_settings"][self.modality]
+                if "rescale" in settings:
+                    pixel_array = (
+                        pixel_array * settings["rescale"]["slope"] 
+                        + settings["rescale"]["intercept"]
+                    )
+                
+                # Apply optimal windowing
+                window_preset = self._get_optimal_window()
+                pixel_array = self._apply_window(pixel_array, window_preset)
+            
+            return pixel_array
+        except Exception as e:
+            logger.error(f"DICOM processing failed: {str(e)}")
+            raise HTTPException(500, "Advanced DICOM processing error")
+
+    def _get_optimal_window(self) -> Dict[str, int]:
+        """Select optimal window settings based on anatomical region"""
+        presets = DICOM_CONFIG["modality_settings"][self.modality]["window_presets"]
+        return presets.get(self.anatomical_region.lower(), presets["default"])
+
+    def _apply_window(self, pixel_array: np.ndarray, window: Dict) -> np.ndarray:
+        """Apply window-level transformation"""
+        center = window["center"]
+        width = window["width"]
+        lower = center - width/2
+        upper = center + width/2
+        return np.clip((pixel_array - lower) * (255/(upper-lower)), 0, 255).astype(np.uint8)
+
+class AIDiagnosticEngine:
+    """Advanced AI diagnostic engine with clinical context integration"""
+    
+    def __init__(self, clinical_context: Dict):
+        self.context = clinical_context
+        self.certainty_scores = {}
+        self.evidence_recommendations = []
+        
+    async def generate_analysis(self, image_data: str) -> str:
+        """Generate enhanced diagnostic report"""
+        system_prompt = self._create_system_prompt()
+        messages = self._create_message_payload(system_prompt, image_data)
+        
+        try:
+            response = await client.chat.completions.create(
+                model="gpt-4-medical",
+                messages=messages,
+                max_tokens=2500,
+                temperature=0.2,
+                response_format={"type": "json_object"}
+            )
+            return self._process_response(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"AI analysis failed: {str(e)}")
+            raise HTTPException(500, "Advanced AI analysis unavailable")
+
+    def _create_system_prompt(self) -> str:
+        """Generate context-aware system prompt"""
+        prompt = f"""You are an expert medical imaging AI analyzing this study considering:
+- Patient age: {self.context.get('age', 'N/A')}
+- Patient sex: {self.context.get('sex', 'N/A')}
+- Clinical history: {self.context.get('history', 'N/A')}
+
+Generate report with:
+1. Quantitative measurements
+2. Probabilistic assessments
+3. Differential diagnosis matrix
+4. Evidence-based recommendations
+
+JSON format:"""
+        return prompt
+
+    def _process_response(self, response: str) -> str:
+        """Process and validate AI response"""
+        try:
+            report_data = json.loads(response)
+            self._validate_report(report_data)
+            return self._format_report(report_data)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON response from AI")
+            raise HTTPException(500, "Analysis formatting error")
+
+    def _validate_report(self, report: Dict):
+        """Validate report structure and content"""
+        required_sections = [
+            "image_characteristics", 
+            "pattern_recognition",
+            "clinical_considerations"
+        ]
+        for section in required_sections:
+            if section not in report:
+                raise ValueError(f"Missing section: {section}")
+
+    def _format_report(self, report: Dict) -> str:
+        """Convert structured data to formatted report"""
+        formatted = []
+        formatted.append(f"## AI Diagnostic Report\n")
+        
+        # Process each section with certainty scoring
+        for section in ["image_characteristics", "pattern_recognition", "clinical_considerations"]:
+            content = report[section]
+            formatted.append(f"### {content['title']} (Certainty: {content['certainty']}%)\n")
+            formatted.extend(content["findings"])
+            
+            if section == "clinical_considerations":
+                formatted.append("\n**Evidence-Based Recommendations:**")
+                formatted.extend(content["recommendations"])
+                
+        return "\n".join(formatted)
+
+def redact_phi(text: str) -> str:
+    """Redact protected health information from text"""
+    phi_patterns = [
+        r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+        r"\b\d{5}\b",  # Zip codes
+        r"\b[A-Za-z]{2}\d{5}\b"  # Medical record numbers
+    ]
+    for pattern in phi_patterns:
+        text = re.sub(pattern, "[REDACTED]", text)
+    return text
+
+@app.post("/analyze-image/")
+async def analyze_image(
+    file: UploadFile = File(...),
+    age: Optional[int] = Query(None, description="Patient's age"),
+    sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
+) -> dict:
+    """Enhanced image analysis endpoint with advanced processing"""
+    try:
+        # Validate input size
+        if file.size > DICOM_CONFIG["max_file_size"]:
+            raise HTTPException(413, "File size exceeds maximum limit")
+
+        raw_data = await file.read()
+        filename = file.filename.lower()
+        
+        # Process image with advanced pipeline
+        if filename.endswith(".dcm"):
+            dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
+            processor = AdvancedDICOMProcessor(dicom_obj)
+            pixel_array = processor.apply_advanced_processing()
+            image = Image.fromarray(pixel_array)
+        else:
+            image = Image.open(io.BytesIO(raw_data))
+            if image.mode not in ["RGB", "L"]:
+                image = image.convert("RGB")
+
+        # Generate analysis
+        clinical_context = {"age": age, "sex": sex}
+        diagnostic_engine = AIDiagnosticEngine(clinical_context)
+        data_url = encode_image_to_data_url(image)
+        analysis = await diagnostic_engine.generate_analysis(data_url)
+        
+        # Apply PHI redaction
+        analysis = redact_phi(analysis)
+
+        # Log analytics
+        if analytics:
+            analytics.log_study({
+                "modality": processor.modality if filename.endswith(".dcm") else "Standard",
+                "findings": diagnostic_engine.certainty_scores,
+                "recommendations": diagnostic_engine.evidence_recommendations
+            })
+
+        return JSONResponse(content={
+            "filename": filename,
+            "analysis": analysis,
+            "certainty_scores": diagnostic_engine.certainty_scores,
+            "evidence_recommendations": diagnostic_engine.evidence_recommendations
+        })
+
+    except HTTPException as e:
+        raise e
+    except Exception as err:
+        logger.error(f"Analysis pipeline failed: {str(err)}")
+        raise HTTPException(500, "Advanced analysis service unavailable")
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,270 +252,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Constants
-MIN_RESOLUTION = 512
-REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis - Must be validated by board-certified radiologist*"
-
-
-def encode_image_to_data_url(image: Image.Image) -> str:
-    """Optimized image encoding with quality control"""
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG", quality=90)
-    return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
-
-
-def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
-    """Validate essential DICOM metadata"""
-    required_tags = ["Modality", "BodyPartExamined", "PatientID"]
-    missing_tags = [tag for tag in required_tags if tag not in dicom_obj]
-
-    if missing_tags:
-        logger.error(f"Missing required DICOM tags: {missing_tags}")
-        raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
-
-
-async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
-    """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
-    try:
-        if filename.endswith(".dcm"):
-            try:
-                dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
-                validate_dicom_metadata(dicom_obj)
-
-                pixel_array = dicom_obj.pixel_array
-                norm_array = (
-                    (pixel_array - np.min(pixel_array))
-                    / (np.max(pixel_array) - np.min(pixel_array))
-                    * 255
-                ).astype(np.uint8)
-                image = Image.fromarray(norm_array)
-
-                if "WindowCenter" in dicom_obj:
-                    logger.info(f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
-
-            except pydicom.errors.InvalidDicomError as e:
-                logger.error(f"Invalid DICOM file: {e}")
-                raise HTTPException(400, "Invalid DICOM file")
-            except KeyError as e:
-                logger.error(f"Missing DICOM tag: {e}")
-                raise HTTPException(400, f"Missing DICOM tag: {e}")
-            except Exception as e:
-                logger.error(f"DICOM processing error: {e}")
-                raise HTTPException(500, "DICOM processing failed")
-        else:
-            try:
-                image = Image.open(io.BytesIO(raw_data))
-                if image.mode not in ["RGB", "L"]:
-                    image = image.convert("RGB")
-            except UnidentifiedImageError as e:
-                logger.error(f"Unidentified Image Error: {e}")
-                raise HTTPException(400, "Invalid Image File")
-            except Exception as e:
-                logger.error(f"Standard Image processing error: {e}")
-                raise HTTPException(500, "Image processing failed")
-
-        # Resolution check and resizing (preserving aspect ratio)
-        if min(image.size) < MIN_RESOLUTION:
-            logger.warning(
-                f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio."
-            )
-            width, height = image.size
-            if width < height:
-                new_width = MIN_RESOLUTION
-                new_height = int(height * (MIN_RESOLUTION / width))
-            else:
-                new_height = MIN_RESOLUTION
-                new_width = int(width * (MIN_RESOLUTION / height))
-            image = image.resize((new_width, new_height))
-
-        return image, encode_image_to_data_url(image)
-
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        logger.error(f"Unexpected processing error: {str(err)}")
-        raise HTTPException(500, "Image processing failed")
-
-
-def select_differentials(analysis: str):
-    """Selects appropriate differentials based on image analysis results."""
-    selected_categories = []
-
-    # Basic keyword detection for categories
-    if "scoliosis" in analysis.lower():
-        selected_categories.append("Musculoskeletal")
-    elif "pneumonia" in analysis.lower():
-        selected_categories.append("Pulmonary")
-    elif "stroke" in analysis.lower():
-        selected_categories.append("Neurological")
-    # Add more rules as needed
-
-    return selected_categories
-
-# ADDED LINES: MONGO_URI environment check (does not change existing code)
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
-
-
-############################################
-# New advanced function to incorporate dictionary data
-def incorporate_differentials(analysis_text: str, categories: list) -> str:
-    """
-    Incorporates advanced details from medical_differentials into the analysis text
-    for each detected category. This function demonstrates how we might fetch
-    relevant dictionary entries and append them to the final analysis.
-    """
-    # We'll build a block of additional info from the dictionary for the recognized categories
-    additional_info = []
-
-    for cat in categories:
-        # Hard-coded top-level "Radiology" for these categories, as an example
-        # In real usage, we'd map "Pulmonary" -> medical_differentials["Radiology"]["Pulmonary"]
-        # or parse subcategories more thoroughly.
-        try:
-            # For instance, if cat is "Pulmonary":
-            cat_data = medical_differentials["Radiology"][cat]
-            # We create a short summary
-            info_lines = [f"**Additional {cat} Differentials from dictionary:**"]
-            for subcat, details in cat_data.items():
-                if isinstance(details, dict):
-                    sub_desc = details.get("Description", "")
-                    info_lines.append(f"- **{subcat}**: {sub_desc}")
-                else:
-                    info_lines.append(f"- {subcat}: {details}")
-            additional_info.append("\n".join(info_lines))
-        except KeyError:
-            # If the category isn't in the dictionary or the structure is mismatched
-            logger.warning(f"No dictionary entry found for {cat} or structure mismatch.")
-            pass
-
-    if additional_info:
-        joined = "\n\n".join(additional_info)
-        return analysis_text + "\n\n" + joined
-    else:
-        return analysis_text
-
-############################################
-
-
-@app.post("/analyze-image/")
-async def analyze_image(
-        file: UploadFile = File(...),
-        age: Optional[int] = Query(None, description="Patient's age"),
-        sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
-) -> dict:
-    """Enhanced image analysis endpoint"""
-    try:
-        if age is not None:
-            logger.info(f"Patient age provided: {age}")
-        if sex is not None:
-            logger.info(f"Patient sex provided: {sex}")
-
-        raw_data = await file.read()
-        filename = file.filename.lower()
-
-        # Process and validate image
-        image, data_url = await process_medical_image(raw_data, filename)
-
-        # System prompt engineering
-        system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging.
-Your role is to:
-1. Describe anatomical features and imaging artifacts
-2. Identify statistically significant visual patterns
-3. Compare findings to typical radiographic presentations
-4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
-5. Provide how much it certain.
-
-Format response using:
-**Image Characteristics (Certainty: in percentage)**
-- Modality: [Identified imaging technique]
-- Quality: [Technical assessment]
-- Findings: [Visual observations]
-
-**Pattern Recognition (Certainty: in percentage)**
-- Anatomical correlations
-- Statistical prevalence
-- Literature associations
-
-**Clinical Considerations (Certainty: in percentage)**
-- Next-step imaging
-- Common differentials
-- AI limitations disclaimer"""
-
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Analyze this medical image for clinically relevant visual patterns"},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": data_url,
-                            "detail": "high"
-                        }
-                    }
-                ]
-            }
-        ]
-        if client is None:
-            logger.warning("OpenAI client not initialized, skipping analysis.")
-            analysis = "AI analysis service unavailable."
-        else:
-            # Optimized API parameters
-            response = await client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=2000,
-                temperature=0.3,
-                top_p=0.9,
-                frequency_penalty=0.5,
-                presence_penalty=0.4
-            )
-            analysis = response.choices[0].message.content
-
-        # Insert disclaimers if not already present
-        if REQUIRED_DISCLAIMER not in analysis:
-            analysis += REQUIRED_DISCLAIMER
-
-        # Identify relevant categories from the analysis text
-        detected_categories = select_differentials(analysis)
-        # Incorporate advanced dictionary data for those categories
-        analysis = incorporate_differentials(analysis, detected_categories)
-
-        # Secure storage
-        if store_report is None:
-            logger.warning("store_report function not initialized, skipping report storage.")
-        else:
-            store_report(filename, analysis)  # Store the (possibly updated) analysis
-
-        image_metadata = {
-            "dimensions": image.size,
-            "mode": image.mode,
-            "format": "DICOM" if filename.endswith(".dcm") else "Standard"
-        }
-        response_data = {
-            "filename": filename,
-            "image_metadata": image_metadata,
-            "analysis": analysis
-        }
-        return JSONResponse(content=response_data)
-
-    except HTTPException as e:
-        raise e
-    except Exception as err:
-        logger.error(f"Analysis pipeline failed: {str(err)}")
-        raise HTTPException(500, "AI analysis service unavailable")
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=8002,
         ssl_keyfile=os.getenv("SSL_KEY"),
