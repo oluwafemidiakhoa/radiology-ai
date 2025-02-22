@@ -22,7 +22,7 @@ try:
     analytics = ImagingAnalytics()
 except ImportError:
     analytics = None
-app = FastAPI()
+
 # Configure enhanced logging
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +53,8 @@ DICOM_CONFIG = {
     "min_resolution": 512,
     "max_file_size": 1024 * 1024 * 100  # 100MB
 }
+
+app = FastAPI()
 
 class AdvancedDICOMProcessor:
     """Advanced DICOM processing with modality-specific optimizations"""
@@ -188,6 +190,14 @@ def redact_phi(text: str) -> str:
     for pattern in phi_patterns:
         text = re.sub(pattern, "[REDACTED]", text)
     return text
+
+def encode_image_to_data_url(image: Image.Image) -> str:
+    """Convert a PIL Image to a base64 encoded data URL."""
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return f"data:image/png;base64,{img_str}"
+
 # Example usage in analysis pipeline
 def generate_recommendations(condition: str):
     for category in evidence_based_guidelines.values():
