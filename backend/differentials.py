@@ -1,7 +1,4 @@
-"""
-Comprehensive Differential Diagnosis Dictionary for Medical Imaging
-
-This dictionary covers advanced differential diagnosis considerations across
+"""This dictionary covers advanced differential diagnosis considerations across
 Radiology, Oncology, and Cardiology. Each major category includes subcategories,
 detailed imaging descriptors, associated risk factors, relevant epidemiology,
 and clinical/diagnostic correlations. This resource is intended for integration
@@ -9,387 +6,164 @@ into advanced AI diagnostic systems and should always be used in conjunction wit
 clinical evaluation and additional diagnostic testing.
 """
 
+# Medical differential diagnosis dictionary
 medical_differentials = {
     "Radiology": {
-        "Musculoskeletal": {
-            "Scoliosis": {
-                "Idiopathic": {
-                    "Description": "Most common form, typically seen in adolescents with right thoracic curves.",
-                    "Imaging Features": "Cobb angle measurement, vertebral rotation on PA/lateral films.",
-                    "Clinical Correlations": "May require bracing or surgery based on severity."
-                },
-                "Neuromuscular": {
-                    "Description": "Associated with conditions like cerebral palsy and muscular dystrophy.",
-                    "Imaging Features": "Asymmetric spinal curvature with pelvic obliquity.",
-                    "Clinical Correlations": "Often part of a broader neuromuscular disorder workup."
-                },
-                "Congenital": {
-                    "Description": "Due to vertebral malformations such as hemivertebrae or block vertebrae.",
-                    "Imaging Features": "Segmental anomalies visible on AP/lateral radiographs.",
-                    "Clinical Correlations": "May require surgical intervention if severe."
-                },
-                "Syndromic": {
-                    "Description": "Seen with conditions such as neurofibromatosis, Marfan syndrome, or Klippel-Feil syndrome.",
-                    "Imaging Features": "Associated systemic skeletal anomalies, abnormal vertebral segmentation.",
-                    "Clinical Correlations": "Multidisciplinary evaluation recommended."
-                },
-                "Traumatic": {
-                    "Description": "Resulting from acute or chronic injury to the spine.",
-                    "Imaging Features": "Vertebral fractures, malalignment, possible pseudoarthrosis.",
-                    "Clinical Correlations": "Management depends on stability and neurological involvement."
-                }
-            },
-            "Osteoarthritis": {
-                "Primary": {
-                    "Description": "Degenerative joint disease due to age-related wear and tear.",
-                    "Imaging Features": "Joint-space narrowing, osteophyte formation, subchondral sclerosis on X-ray.",
-                    "Clinical Correlations": "Typically managed conservatively with physical therapy and NSAIDs."
-                },
-                "Secondary": {
-                    "Description": "Resulting from prior trauma, inflammatory arthritis, or metabolic disorders.",
-                    "Imaging Features": "Erosions, joint deformity, and possible calcifications.",
-                    "Clinical Correlations": "May require surgical intervention or targeted medical therapy."
-                }
-            },
-            "Fractures": {
-                "Traumatic": {
-                    "Description": "Due to high-impact injury or falls.",
-                    "Imaging Features": "Displaced or non-displaced fractures, visible on X-ray or CT.",
-                    "Clinical Correlations": "Management varies from casting to surgical fixation."
-                },
-                "Pathologic": {
-                    "Description": "Occurs in bones weakened by conditions such as osteoporosis or malignancy.",
-                    "Imaging Features": "Lytic or blastic lesions associated with fracture lines.",
-                    "Clinical Correlations": "Requires further investigation (biopsy, lab tests) to determine underlying cause."
-                },
-                "Stress Fractures": {
-                    "Description": "Microfractures due to repetitive stress, common in athletes.",
-                    "Imaging Features": "Subtle periosteal reaction or cortical lucencies; best seen on MRI or bone scan.",
-                    "Clinical Correlations": "Often managed with rest and modified activity."
-                }
-            }
-        },
         "Pulmonary": {
             "Pneumonia": {
-                "Bacterial": {
-                    "Description": "Infection causing consolidation of lung tissue.",
-                    "Imaging Features": "Lobar consolidation, air bronchograms on CXR or CT.",
-                    "Clinical Correlations": "Often treated with antibiotics; sputum cultures may guide therapy."
-                },
-                "Viral": {
-                    "Description": "Interstital pneumonia caused by respiratory viruses.",
-                    "Imaging Features": "Diffuse interstitial infiltrates, ground-glass opacities on CT.",
-                    "Clinical Correlations": "Management is usually supportive; severity varies."
-                },
-                "Fungal": {
-                    "Description": "Typically occurs in immunocompromised patients.",
-                    "Imaging Features": "Nodular opacities, cavitation, possible halo sign on CT.",
-                    "Clinical Correlations": "Requires antifungal therapy and immune status assessment."
-                },
-                "Aspiration": {
-                    "Description": "Infection due to inhalation of foreign materials, often in debilitated patients.",
-                    "Imaging Features": "Infiltrates in dependent lung regions, often right lower lobe.",
-                    "Clinical Correlations": "Management includes supportive care and addressing underlying risk factors."
-                }
+                "imaging_descriptors": ["Lobar consolidation", "Multifocal infiltrates", "Air bronchograms", "Ground-glass opacity"],
+                "risk_factors": ["Advanced age", "Immunocompromise", "Chronic lung disease", "Smoking", "Aspiration"],
+                "epidemiology": "High prevalence, particularly in winter months",
+                "clinical_diagnostic_correlations": ["Fever", "Cough", "Purulent sputum", "Elevated WBC count", "Positive sputum culture", "CRP elevation"],
+                "recommendations": ["Chest X-ray", "CT Chest (if X-ray is inconclusive)", "Sputum culture", "Blood cultures", "Antibiotic therapy (empiric then targeted)", "Supportive care (oxygen, hydration)", "Consider viral panel"]
             },
             "Pulmonary Embolism": {
-                "Thromboembolic": {
-                    "Description": "Obstruction of pulmonary arteries by blood clots.",
-                    "Imaging Features": "CT Pulmonary Angiography (CTPA) shows filling defects; ventilation-perfusion scan may be used.",
-                    "Clinical Correlations": "Requires prompt anticoagulation therapy."
-                },
-                "Fat Embolism": {
-                    "Description": "Typically secondary to long bone fractures.",
-                    "Imaging Features": "Diffuse bilateral infiltrates on chest imaging; clinical symptoms include petechial rash.",
-                    "Clinical Correlations": "Management is supportive; consider in trauma cases."
-                },
-                "Septic Embolism": {
-                    "Description": "Emboli resulting from infectious sources, e.g., endocarditis.",
-                    "Imaging Features": "Multiple peripheral nodules, sometimes cavitary, on CT.",
-                    "Clinical Correlations": "Requires antibiotic therapy and source control."
-                }
+                "imaging_descriptors": ["Wedge-shaped opacity (Hampton's hump)", "Vascular cutoff", "Enlarged pulmonary artery", "Right heart strain (RV/LV ratio > 1)", "Pleural effusion", "Mosaic attenuation pattern"],
+                "risk_factors": ["Immobility", "Surgery", "Trauma", "Cancer", "Oral contraceptives", "Hormone replacement therapy", "Pregnancy", "Inherited thrombophilia"],
+                "epidemiology": "Moderate prevalence, significant cause of morbidity and mortality",
+                "clinical_diagnostic_correlations": ["Sudden onset dyspnea", "Chest pain", "Tachycardia", "Hypoxia", "D-dimer elevation", "Wells score assessment"],
+                "recommendations": ["CT Pulmonary Angiography (CTPA)", "Ventilation/Perfusion (V/Q) scan (if CTPA is contraindicated)", "Pulmonary angiography (rarely used)", "Electrocardiogram (ECG)", "Echocardiogram (to assess right heart strain)", "Anticoagulation (LMWH, unfractionated heparin, DOACs)", "Thrombolysis (in severe cases)", "Embolectomy (rarely used)"]
             },
             "Lung Cancer": {
-                "Non-Small Cell Lung Cancer (NSCLC)": {
-                    "Adenocarcinoma": {
-                        "Description": "Often peripheral, may present as ground-glass nodules or solid masses.",
-                        "Imaging Features": "CT shows spiculated margins, pleural retraction.",
-                        "Clinical Correlations": "Associated with smoking, but also seen in non-smokers."
-                    },
-                    "Squamous Cell Carcinoma": {
-                        "Description": "Typically central, may cavitate.",
-                        "Imaging Features": "Central mass with cavitation; often linked with smoking.",
-                        "Clinical Correlations": "Requires tissue biopsy for definitive diagnosis."
-                    },
-                    "Large Cell Carcinoma": {
-                        "Description": "Aggressive, poorly differentiated carcinoma.",
-                        "Imaging Features": "Peripheral mass without clear features; may be rapidly growing.",
-                        "Clinical Correlations": "Often detected at an advanced stage."
-                    }
-                },
-                "Small Cell Lung Cancer (SCLC)": {
-                    "Description": "Highly aggressive with early metastasis.",
-                    "Imaging Features": "Mediastinal involvement, bulky lymphadenopathy on CT.",
-                    "Clinical Correlations": "Requires systemic chemotherapy and radiotherapy."
-                },
-                "Metastatic Lung Cancer": {
-                    "Description": "Secondary involvement from a primary tumor elsewhere (e.g., breast, colon).",
-                    "Imaging Features": "Multiple nodules of varying sizes on CT.",
-                    "Clinical Correlations": "Determining the primary is key; PET-CT may help in staging."
-                }
+                "imaging_descriptors": ["Solitary pulmonary nodule", "Mass with irregular borders", "Hilar or mediastinal lymphadenopathy", "Pleural effusion", "Atelectasis", "Rib destruction"],
+                "risk_factors": ["Smoking", "Radon exposure", "Asbestos exposure", "Family history", "Air pollution"],
+                "epidemiology": "Leading cause of cancer death worldwide",
+                "clinical_diagnostic_correlations": ["Chronic cough", "Hemoptysis", "Weight loss", "Shortness of breath", "Chest pain", "Fatigue"],
+                "recommendations": ["Chest CT scan", "PET/CT scan", "Bronchoscopy with biopsy", "CT-guided biopsy", "Surgical resection", "Chemotherapy", "Radiation therapy", "Immunotherapy"]
             },
-            "Vascular": {
-                "Aortic Dissection": {
-                    "Description": "Tear in the intima leading to separation of aortic wall layers.",
-                    "Imaging Features": "CT angiography shows intimal flap, false lumen.",
-                    "Clinical Correlations": "Requires emergent surgical management."
-                },
-                "Aneurysms": {
-                    "Description": "Localized dilation of the aorta or other vessels.",
-                    "Imaging Features": "CT or ultrasound demonstrates abnormal vessel diameter.",
-                    "Clinical Correlations": "Monitoring and surgical repair depending on size and risk."
-                }
+            "COPD (Chronic Obstructive Pulmonary Disease)": {
+                "imaging_descriptors": ["Hyperinflation", "Flattened diaphragm", "Increased retrosternal air space", "Bullae", "Thickened bronchial walls"],
+                "risk_factors": ["Smoking", "Alpha-1 antitrypsin deficiency", "Air pollution", "Occupational exposures"],
+                "epidemiology": "Common chronic respiratory disease, increasing in prevalence",
+                "clinical_diagnostic_correlations": ["Chronic cough", "Sputum production", "Shortness of breath", "Wheezing", "Decreased FEV1/FVC ratio on spirometry"],
+                "recommendations": ["Pulmonary function tests (spirometry)", "Chest X-ray (to rule out other causes)", "CT scan (to assess emphysema and bronchiectasis)", "Bronchodilators (beta-agonists, anticholinergics)", "Inhaled corticosteroids", "Pulmonary rehabilitation", "Oxygen therapy (if hypoxic)"]
+
             }
         },
         "Neurological": {
             "Stroke": {
-                "Ischemic": {
-                    "Description": "Blockage of a cerebral vessel causing brain tissue infarction.",
-                    "Imaging Features": "Early CT can be normal; MRI diffusion-weighted imaging (DWI) is sensitive.",
-                    "Clinical Correlations": "Time-sensitive treatment is required; thrombolysis may be indicated."
-                },
-                "Hemorrhagic": {
-                    "Description": "Bleeding within the brain parenchyma or subarachnoid space.",
-                    "Imaging Features": "CT shows hyperdense regions corresponding to blood.",
-                    "Clinical Correlations": "Requires rapid management to control intracranial pressure."
-                }
+                "imaging_descriptors": ["Hyperdense vessel sign (acute thrombus)", "Loss of gray-white differentiation", "Early ischemic changes (sulcal effacement, cytotoxic edema)", "Diffusion restriction on MRI", "Hemorrhagic transformation"],
+                "risk_factors": ["Hypertension", "Hyperlipidemia", "Diabetes mellitus", "Smoking", "Atrial fibrillation", "Carotid artery stenosis", "Family history"],
+                "epidemiology": "High prevalence, major cause of disability and death",
+                "clinical_diagnostic_correlations": ["Sudden onset neurological deficits (weakness, numbness, speech difficulty, visual disturbance)", "NIH Stroke Scale score", "FAST exam (Face, Arms, Speech, Time)"],
+                "recommendations": ["CT scan of the brain (non-contrast)", "CT Angiography (CTA) of the head and neck", "MRI of the brain (DWI, ADC, FLAIR)", "ECG (to assess for atrial fibrillation)", "Blood glucose monitoring", "Thrombolysis (if eligible within time window)", "Mechanical thrombectomy (if large vessel occlusion)", "Antiplatelet therapy (aspirin)", "Blood pressure control", "Neurointensive care"]
             },
-            "Neurodegenerative": {
-                "Alzheimer's Disease": {
-                    "Description": "Progressive memory loss and cognitive decline.",
-                    "Imaging Features": "MRI shows cortical atrophy, particularly in the medial temporal lobes.",
-                    "Clinical Correlations": "Diagnosis confirmed via neuropsychological testing and biomarkers."
-                },
-                "Parkinson's Disease": {
-                    "Description": "Movement disorder characterized by bradykinesia, rigidity, and tremors.",
-                    "Imaging Features": "DATscan can help assess dopaminergic neuron loss.",
-                    "Clinical Correlations": "Clinical diagnosis with supportive imaging if necessary."
-                },
-                "Multiple Sclerosis": {
-                    "Description": "Autoimmune demyelinating disorder of the CNS.",
-                    "Imaging Features": "MRI demonstrates multiple T2/FLAIR hyperintense lesions.",
-                    "Clinical Correlations": "Diagnosis requires clinical history and supportive lab findings (e.g., oligoclonal bands)."
-                }
+            "Brain Tumor": {
+                "imaging_descriptors": ["Mass lesion with surrounding edema", "Enhancement with contrast", "Midline shift", "Hydrocephalus", "Intracranial hemorrhage"],
+                "risk_factors": ["Genetic syndromes (Neurofibromatosis, Tuberous sclerosis)", "Exposure to ionizing radiation"],
+                "epidemiology": "Relatively rare, but can be devastating",
+                "clinical_diagnostic_correlations": ["Headaches", "Seizures", "Focal neurological deficits", "Papilledema", "Cognitive changes"],
+                "recommendations": ["MRI of the brain with and without contrast", "Biopsy", "Surgical resection", "Radiation therapy", "Chemotherapy", "Steroids (to reduce edema)"]
             },
-            "Traumatic Brain Injury": {
-                "Concussion": {
-                    "Description": "Mild traumatic brain injury, usually with transient symptoms.",
-                    "Imaging Features": "CT often normal; MRI may reveal subtle diffuse axonal injury.",
-                    "Clinical Correlations": "Clinical evaluation is key; imaging used to rule out severe injury."
-                },
-                "Contusion": {
-                    "Description": "Focal brain bruising from impact.",
-                    "Imaging Features": "CT shows patchy hyperdensities; MRI is more sensitive for smaller contusions.",
-                    "Clinical Correlations": "Monitoring for progression or secondary injury is critical."
-                }
+            "Multiple Sclerosis (MS)": {
+                "imaging_descriptors": ["Ovoid, periventricular white matter lesions", "Dawson's fingers (lesions extending perpendicular to the ventricles)", "Enhancing lesions (active inflammation)", "Spinal cord lesions"],
+                "risk_factors": ["Genetic predisposition", "Vitamin D deficiency", "Epstein-Barr virus infection", "Smoking"],
+                "epidemiology": "More common in women and in temperate climates",
+                "clinical_diagnostic_correlations": ["Optic neuritis", "Transverse myelitis", "Lhermitte's sign", "Fatigue", "Sensory disturbances", "Motor weakness"],
+                "recommendations": ["MRI of the brain and spinal cord with and without contrast", "Lumbar puncture (to assess for oligoclonal bands)", "Visual evoked potentials (VEPs)", "Disease-modifying therapies (DMTs)", "Symptomatic treatment"]
+
             }
         },
-        "Gastrointestinal": {
-            "Inflammatory Bowel Disease": {
-                "Crohn's Disease": {
-                    "Description": "Transmural inflammation with skip lesions.",
-                    "Imaging Features": "Barium studies show 'string sign'; CT/MRI may show bowel wall thickening.",
-                    "Clinical Correlations": "Endoscopy and biopsy confirm diagnosis."
-                },
-                "Ulcerative Colitis": {
-                    "Description": "Mucosal inflammation starting at the rectum and extending proximally.",
-                    "Imaging Features": "CT may show diffuse colonic thickening; colonoscopy is diagnostic.",
-                    "Clinical Correlations": "Management includes 5-ASA compounds and steroids."
-                }
-            },
-            "Liver Lesions": {
-                "Hepatocellular Carcinoma (HCC)": {
-                    "Description": "Primary liver cancer, often in a cirrhotic liver.",
-                    "Imaging Features": "Arterial phase hyperenhancement with washout in portal venous/delayed phase on CT/MRI.",
-                    "Clinical Correlations": "AFP levels and biopsy are key for diagnosis."
-                },
-                "Hemangioma": {
-                    "Description": "Benign vascular liver lesion.",
-                    "Imaging Features": "Peripheral nodular enhancement with progressive centripetal fill-in on CT/MRI.",
-                    "Clinical Correlations": "Usually requires no treatment if asymptomatic."
-                },
-                "Focal Nodular Hyperplasia (FNH)": {
-                    "Description": "Benign lesion with a central scar.",
-                    "Imaging Features": "Central scar and radiating vessels on contrast-enhanced MRI.",
-                    "Clinical Correlations": "Typically requires monitoring unless symptomatic."
-                }
-            },
-            "Pancreatic Pathologies": {
-                "Pancreatitis": {
-                    "Description": "Inflammation of the pancreas, acute or chronic.",
-                    "Imaging Features": "CT shows pancreatic enlargement, peripancreatic fat stranding; chronic form may show calcifications.",
-                    "Clinical Correlations": "Lab values (amylase, lipase) help confirm the diagnosis."
-                },
-                "Pancreatic Adenocarcinoma": {
-                    "Description": "Most common malignant pancreatic tumor, often in the head of the pancreas.",
-                    "Imaging Features": "CT/MRI may show a hypovascular mass with ductal dilatation (double duct sign).",
-                    "Clinical Correlations": "Poor prognosis; diagnosis confirmed with biopsy."
-                }
+        "Musculoskeletal":{
+            "Fracture":{
+                "imaging_descriptors":["Discontinuity of the bone cortex","Presence of fracture line", "Bone fragments displacement", "Soft tissue swelling"],
+                "risk_factors":["Trauma", "Osteoporosis", "Age related bone changes", "Repetitive stress", "Underlying bone pathology"],
+                "epidemiology":"Common, particularly in older adults and athletes",
+                "clinical_diagnostic_correlations": ["Pain","Swelling", "Deformity", "Limited range of motion", "Tenderness"],
+                "recommendations": ["X-Ray", "CT scan", "MRI", "Immobilization", "Pain management", "Surgery(if required)"]
+
             }
+        }
+    },
+    "Oncology": {
+        "Breast Cancer": {
+            "imaging_descriptors": ["Mass with spiculated margins", "Microcalcifications", "Architectural distortion", "Nipple retraction", "Skin thickening", "Lymphadenopathy"],
+            "risk_factors": ["Age", "Family history", "Genetic mutations (BRCA1, BRCA2)", "Early menarche, late menopause", "Nulliparity or late first pregnancy", "Hormone replacement therapy", "Obesity"],
+            "epidemiology": "Most common cancer in women worldwide",
+            "clinical_diagnostic_correlations": ["Palpable breast mass", "Nipple discharge", "Skin changes", "Lymph node enlargement"],
+            "recommendations": ["Mammography", "Breast ultrasound", "MRI of the breast", "Biopsy (core needle biopsy, excisional biopsy)", "Staging (sentinel lymph node biopsy, axillary lymph node dissection)", "Surgery (lumpectomy, mastectomy)", "Radiation therapy", "Chemotherapy", "Hormone therapy", "Targeted therapy", "Immunotherapy"]
         },
-        "Oncology": {
-            "Lung Cancer": {
-                "Non-Small Cell Lung Cancer (NSCLC)": {
-                    "Adenocarcinoma": {
-                        "Description": "Often presents peripherally, may appear as ground-glass opacities or solid masses.",
-                        "Imaging Features": "Spiculated margins, possible pleural retraction on CT.",
-                        "Clinical Correlations": "Associated with smoking and genetic mutations (EGFR, ALK)."
-                    },
-                    "Squamous Cell Carcinoma": {
-                        "Description": "Typically central with cavitation, linked to smoking.",
-                        "Imaging Features": "Central mass with possible cavitation; mediastinal lymphadenopathy may be present.",
-                        "Clinical Correlations": "Requires tissue confirmation; often treated with surgery or chemoradiation."
-                    },
-                    "Large Cell Carcinoma": {
-                        "Description": "Undifferentiated and aggressive, often peripheral.",
-                        "Imaging Features": "Rapidly growing mass without clear differentiation on imaging.",
-                        "Clinical Correlations": "Poor prognosis; often detected at advanced stages."
-                    }
-                },
-                "Small Cell Lung Cancer (SCLC)": {
-                    "Description": "Highly aggressive, early metastases with mediastinal involvement.",
-                    "Imaging Features": "Bulky mediastinal lymphadenopathy and rapid progression on imaging.",
-                    "Clinical Correlations": "Requires systemic therapy; often combined with radiotherapy."
-                },
-                "Metastatic Lung Cancer": {
-                    "Description": "Secondary lung involvement from a primary tumor elsewhere (e.g., breast, colon).",
-                    "Imaging Features": "Multiple nodules of varying sizes; PET-CT may be used for further evaluation.",
-                    "Clinical Correlations": "Identifying the primary is crucial; management is usually systemic."
-                }
-            },
-            "Breast Cancer": {
-                "Invasive Ductal Carcinoma (IDC)": {
-                    "Description": "Most common type; often presents as a spiculated mass.",
-                    "Imaging Features": "Mammogram shows spiculated, irregular mass with possible calcifications.",
-                    "Clinical Correlations": "Diagnosis confirmed by biopsy; treatment involves surgery and adjuvant therapy."
-                },
-                "Invasive Lobular Carcinoma (ILC)": {
-                    "Description": "Often multifocal and bilateral, with subtle imaging features.",
-                    "Imaging Features": "Architectural distortion on mammogram; may be better delineated with MRI.",
-                    "Clinical Correlations": "Can be more challenging to detect; requires thorough clinical and imaging evaluation."
-                },
-                "Ductal Carcinoma In Situ (DCIS)": {
-                    "Description": "Non-invasive cancer confined to the ducts.",
-                    "Imaging Features": "Microcalcifications on mammogram are classic.",
-                    "Clinical Correlations": "Usually managed with lumpectomy and radiation; high risk for progression if untreated."
-                }
-            },
-            "Colorectal Cancer": {
-                "Adenocarcinoma": {
-                    "Description": "The most common type; arises from adenomatous polyps.",
-                    "Imaging Features": "CT colonography may reveal polypoid lesions; colonoscopy is definitive.",
-                    "Clinical Correlations": "Early detection is key; screening programs are effective in reducing mortality."
-                },
-                "Signet Ring Cell Carcinoma": {
-                    "Description": "Aggressive, characterized by mucin production.",
-                    "Imaging Features": "May present with diffuse wall thickening and linitis plastica on imaging.",
-                    "Clinical Correlations": "Poor prognosis; often diagnosed at an advanced stage."
-                }
-            },
-            "Brain Tumors": {
-                "Glioblastoma Multiforme (GBM)": {
-                    "Description": "High-grade astrocytoma, aggressive, with rapid growth.",
-                    "Imaging Features": "Ring-enhancing lesion with central necrosis on contrast-enhanced MRI.",
-                    "Clinical Correlations": "Very poor prognosis; multimodal treatment is required."
-                },
-                "Meningioma": {
-                    "Description": "Typically benign, extra-axial tumor arising from the meninges.",
-                    "Imaging Features": "Dural tail sign, well-circumscribed mass on MRI with contrast.",
-                    "Clinical Correlations": "Often incidental findings; may require surgical resection if symptomatic."
-                },
-                "Pituitary Adenoma": {
-                    "Description": "Common benign tumor of the pituitary gland.",
-                    "Imaging Features": "Enlarged sella turcica, often with suprasellar extension on MRI.",
-                    "Clinical Correlations": "Hormonal evaluation is essential; treatment options include medical therapy and surgery."
-                }
-            }
+        "Prostate Cancer": {
+            "imaging_descriptors": ["Peripheral zone lesion", "Reduced diffusion on MRI", "Elevated choline/citrate ratio on MR spectroscopy", "Bone metastases"],
+            "risk_factors": ["Age", "Family history", "African American ethnicity", "High-fat diet"],
+            "epidemiology": "Most common cancer in men",
+            "clinical_diagnostic_correlations": ["Elevated PSA level", "Urinary symptoms (frequency, urgency, nocturia)", "Bone pain (if metastatic)"],
+            "recommendations": ["Prostate-specific antigen (PSA) testing", "Digital rectal exam (DRE)", "Transrectal ultrasound (TRUS) with biopsy", "MRI of the prostate", "Gleason score", "Active surveillance", "Radical prostatectomy", "Radiation therapy", "Hormone therapy", "Chemotherapy"]
         },
-        "Cardiology": {
-            "Coronary Artery Disease (CAD)": {
-                "Stable Angina": {
-                    "Description": "Predictable chest pain on exertion due to myocardial ischemia.",
-                    "Imaging Features": "Stress testing, coronary CT angiography (CCTA) reveals stenosis.",
-                    "Clinical Correlations": "Managed medically with nitrates and beta-blockers."
-                },
-                "Unstable Angina": {
-                    "Description": "Worsening chest pain at rest; high risk for myocardial infarction.",
-                    "Imaging Features": "May have non-specific ECG changes; clinical biomarkers are critical.",
-                    "Clinical Correlations": "Requires hospitalization and aggressive therapy."
-                },
-                "Myocardial Infarction (MI)": {
-                    "Description": "Acute ischemia resulting in myocardial injury.",
-                    "Imaging Features": "STEMI or NSTEMI patterns on ECG; imaging (echo, CMR) assesses infarct size.",
-                    "Clinical Correlations": "Immediate reperfusion therapy is necessary."
-                }
-            },
-            "Heart Failure": {
-                "Systolic Heart Failure (HFrEF)": {
-                    "Description": "Reduced left ventricular ejection fraction (<40%).",
-                    "Imaging Features": "Echocardiography shows global hypokinesis, dilated ventricle.",
-                    "Clinical Correlations": "Managed with ACE inhibitors, beta-blockers, and diuretics."
-                },
-                "Diastolic Heart Failure (HFpEF)": {
-                    "Description": "Preserved ejection fraction with impaired ventricular relaxation.",
-                    "Imaging Features": "Echocardiography shows normal EF but abnormal diastolic filling patterns.",
-                    "Clinical Correlations": "Treatment focuses on controlling blood pressure and comorbidities."
-                }
-            },
-            "Valvular Heart Disease": {
-                "Aortic Stenosis": {
-                    "Description": "Calcification and narrowing of the aortic valve.",
-                    "Imaging Features": "Echocardiography shows a high transvalvular gradient, calcification, and LV hypertrophy.",
-                    "Clinical Correlations": "Surgical or transcatheter aortic valve replacement (TAVR) may be indicated."
-                },
-                "Mitral Regurgitation": {
-                    "Description": "Leakage of blood backward through the mitral valve.",
-                    "Imaging Features": "Doppler echocardiography reveals regurgitant flow; LV enlargement may be evident.",
-                    "Clinical Correlations": "May require surgical repair or replacement if severe."
-                }
-            },
-            "Arrhythmias": {
-                "Atrial Fibrillation": {
-                    "Description": "Irregularly irregular rhythm with rapid ventricular response.",
-                    "Imaging Features": "ECG shows absence of P waves; echocardiography assesses for atrial enlargement.",
-                    "Clinical Correlations": "Anticoagulation is important to prevent stroke."
-                },
-                "Ventricular Tachycardia": {
-                    "Description": "Life-threatening arrhythmia with wide QRS complexes.",
-                    "Imaging Features": "ECG and cardiac MRI can help localize scarring that predisposes to VT.",
-                    "Clinical Correlations": "May require ICD placement and antiarrhythmic therapy."
-                },
-                "Supraventricular Tachycardia (SVT)": {
-                    "Description": "Rapid heart rate originating above the ventricles.",
-                    "Imaging Features": "ECG shows narrow complex tachycardia; vagal maneuvers may transiently slow the rate.",
-                    "Clinical Correlations": "Catheter ablation is an option for recurrent SVT."
-                }
-            },
-            "Congenital Heart Disease": {
-                "Atrial Septal Defect (ASD)": {
-                    "Description": "Abnormal opening in the atrial septum, leading to left-to-right shunt.",
-                    "Imaging Features": "Echocardiography shows septal defect with shunting; bubble study may be positive.",
-                    "Clinical Correlations": "Often monitored until surgical repair is indicated."
-                },
-                "Ventricular Septal Defect (VSD)": {
-                    "Description": "Opening in the interventricular septum causing shunting.",
-                    "Imaging Features": "Holosystolic murmur on auscultation; echocardiography confirms defect size and shunt flow.",
-                    "Clinical Correlations": "Small defects may close spontaneously; larger ones require surgical repair."
-                },
-                "Tetralogy of Fallot": {
-                    "Description": "A combination of four heart defects including VSD and pulmonary stenosis.",
-                    "Imaging Features": "CXR shows a 'boot-shaped' heart; echocardiography confirms details.",
-                    "Clinical Correlations": "Surgical repair is required in infancy or early childhood."
-                }
+        "Colorectal Cancer": {
+            "imaging_descriptors": ["Polypoid lesion", "Annular constricting lesion", "Bowel wall thickening", "Lymph node metastases", "Liver metastases", "Peritoneal implants"],
+            "risk_factors": ["Age", "Family history", "Inflammatory bowel disease (IBD)", "Diet high in red and processed meat", "Smoking", "Obesity", "Alcohol consumption"],
+            "epidemiology": "Third most common cancer worldwide",
+            "clinical_diagnostic_correlations": ["Change in bowel habits", "Rectal bleeding", "Abdominal pain", "Weight loss", "Iron deficiency anemia"],
+            "recommendations": ["Colonoscopy", "Flexible sigmoidoscopy", "Fecal occult blood test (FOBT)", "Fecal immunochemical test (FIT)", "CT colonography (virtual colonoscopy)", "Biopsy", "Surgical resection", "Chemotherapy", "Radiation therapy", "Targeted therapy", "Immunotherapy"]
+        }
+    },
+    "Cardiology": {
+        "Myocardial Infarction (MI)": {
+            "imaging_descriptors": ["Regional wall motion abnormality", "Reduced ejection fraction", "Late gadolinium enhancement (scarring)", "Coronary artery stenosis or occlusion"],
+            "risk_factors": ["Hypertension", "Hyperlipidemia", "Diabetes mellitus", "Smoking", "Family history", "Obesity", "Sedentary lifestyle"],
+            "epidemiology": "Major cause of morbidity and mortality worldwide",
+            "clinical_diagnostic_correlations": ["Chest pain", "Shortness of breath", "Sweating", "Nausea", "Vomiting", "ECG changes (ST-segment elevation, T-wave inversion)", "Elevated cardiac biomarkers (troponin)", "Killip Class"],
+            "recommendations": ["Electrocardiogram (ECG)", "Cardiac biomarkers (troponin)", "Coronary angiography", "Percutaneous coronary intervention (PCI)", "Thrombolysis (if PCI is not available)", "Aspirin", "Clopidogrel", "Beta-blockers", "ACE inhibitors", "Statins", "Oxygen therapy"]
+        },
+        "Heart Failure": {
+            "imaging_descriptors": ["Cardiomegaly", "Pulmonary edema", "Pleural effusion", "Left ventricular dilation", "Reduced ejection fraction", "Mitral regurgitation", "Tricuspid regurgitation"],
+            "risk_factors": ["Hypertension", "Coronary artery disease", "Valvular heart disease", "Cardiomyopathy", "Diabetes mellitus", "Alcohol abuse", "Family history"],
+            "epidemiology": "Increasing prevalence with aging population",
+            "clinical_diagnostic_correlations": ["Shortness of breath", "Fatigue", "Swelling of ankles and feet", "Orthopnea", "Paroxysmal nocturnal dyspnea", "Elevated BNP or NT-proBNP"],
+            "recommendations": ["Echocardiogram", "Electrocardiogram (ECG)", "Chest X-ray", "BNP or NT-proBNP measurement", "ACE inhibitors or ARBs", "Beta-blockers", "Diuretics", "Aldosterone antagonists", "Digoxin", "Sodium-glucose cotransporter 2 (SGLT2) inhibitors"]
+        },
+        "Arrhythmia": {
+            "Atrial Fibrillation (AF)": {
+                "imaging_descriptors": ["Absence of P waves", "Irregularly irregular rhythm"],
+                "risk_factors": ["Age", "Hypertension", "Coronary artery disease", "Valvular heart disease", "Heart failure", "Hyperthyroidism", "Alcohol abuse", "Obesity", "Sleep apnea"],
+                "epidemiology": "Most common sustained arrhythmia",
+                "clinical_diagnostic_correlations": ["Palpitations", "Shortness of breath", "Fatigue", "Dizziness", "Chest pain", "Stroke"],
+                "recommendations": ["Electrocardiogram (ECG)", "Holter monitor", "Event monitor", "Anticoagulation (warfarin, DOACs)", "Rate control (beta-blockers, calcium channel blockers, digoxin)", "Rhythm control (antiarrhythmic drugs, cardioversion, catheter ablation)"]
             }
+        }
+    }
+}
+
+# Evidence-based clinical guidelines
+evidence_based_guidelines = {
+    "ACR": {
+        "LungRADS": {
+            "Category 1": "No significant findings - routine follow-up",
+            "Category 2": "Benign appearance - 12 month follow-up",
+            "Category 3": "Probably benign - short-interval follow-up (e.g., 6 months)",
+            "Category 4A": "Suspicious findings - consider biopsy",
+            "Category 4B": "Highly suspicious findings - biopsy recommended",
+            "Category 4X": "Highly suspicious findings with additional features (e.g., new or growing lesion) - biopsy mandatory"
+        },
+        "BI-RADS": {
+            "Category 0": "Incomplete - need additional imaging evaluation",
+            "Category 1": "Negative - routine screening",
+            "Category 2": "Benign findings - routine screening",
+            "Category 3": "Probably benign - short-interval follow-up (e.g., 6 months)",
+            "Category 4A": "Low suspicion for malignancy - consider biopsy",
+            "Category 4B": "Intermediate suspicion for malignancy - biopsy recommended",
+            "Category 4C": "Moderate concern for malignancy - biopsy recommended",
+            "Category 5": "Highly suggestive of malignancy - appropriate action should be taken",
+            "Category 6": "Known biopsy-proven malignancy - appropriate action should be taken"
+        }
+
+    },
+    "ESC": {
+        "PE": {
+            "Diagnosis": ["Wells Score", "D-Dimer testing", "CT Pulmonary Angiography (CTPA)", "Ventilation/Perfusion (V/Q) scan"],
+            "Treatment": ["Anticoagulation (LMWH, unfractionated heparin, DOACs)", "Thrombolysis (in severe cases)", "Embolectomy (rarely used)", "IVC filter (in patients with contraindications to anticoagulation)"],
+            "Prognosis": ["Pulmonary Embolism Severity Index (PESI)", "sPESI (simplified PESI)"]
+        },
+        "ACS": {
+            "Diagnosis": ["Electrocardiogram (ECG)", "Cardiac biomarkers (troponin)", "Coronary angiography"],
+            "Treatment": ["Aspirin", "Clopidogrel or ticagrelor", "Heparin", "Percutaneous coronary intervention (PCI)", "Coronary artery bypass grafting (CABG)", "Beta-blockers", "ACE inhibitors", "Statins"]
+        }
+    },
+    "NCCN": {
+        "Breast Cancer": {
+            "Screening": ["Mammography", "Clinical breast exam", "Self-breast exam", "MRI (for high-risk individuals)"],
+            "Treatment": ["Surgery (lumpectomy, mastectomy)", "Radiation therapy", "Chemotherapy", "Hormone therapy", "Targeted therapy", "Immunotherapy"]
         }
     }
 }
