@@ -142,6 +142,13 @@ Generate report with:
 JSON format:"""
         return prompt
 
+    def _create_message_payload(self, system_prompt: str, image_data: str) -> List[Dict[str, str]]:
+        """Create message payload for AI analysis"""
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": image_data}
+        ]
+
     def _process_response(self, response: str) -> str:
         """Process and validate AI response"""
         try:
