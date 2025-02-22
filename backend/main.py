@@ -26,6 +26,16 @@ except ImportError as e:
     OPENAI_API_KEY = None  # Or handle the missing config differently
     exit()  # Stop execution if the config is not working.
 
+# Existing differentials code
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
+
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
+
+from differentials import medical_differentials
+from differentials import medical_differentials as dx_dict  # Alias for clarity
+
 from differentials import medical_differentials
 
 # Enhanced logging configuration
@@ -61,11 +71,13 @@ app.add_middleware(
 MIN_RESOLUTION = 512
 REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis - Must be validated by board-certified radiologist*"
 
+
 def encode_image_to_data_url(image: Image.Image) -> str:
     """Optimized image encoding with quality control"""
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
+
 
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """Validate essential DICOM metadata"""
@@ -75,6 +87,7 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     if missing_tags:
         logger.error(f"Missing required DICOM tags: {missing_tags}")
         raise HTTPException(400, f"Incomplete DICOM metadata: Missing {', '.join(missing_tags)}")
+
 
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """Enhanced image processing with detailed error logging and aspect-ratio-preserving resizing"""
@@ -104,7 +117,6 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             except Exception as e:
                 logger.error(f"DICOM processing error: {e}")
                 raise HTTPException(500, "DICOM processing failed")
-
         else:
             try:
                 image = Image.open(io.BytesIO(raw_data))
@@ -119,7 +131,9 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
 
         # Resolution check and resizing (preserving aspect ratio)
         if min(image.size) < MIN_RESOLUTION:
-            logger.warning(f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio.")
+            logger.warning(
+                f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing image while preserving aspect ratio."
+            )
             width, height = image.size
             if width < height:
                 new_width = MIN_RESOLUTION
@@ -132,15 +146,17 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         return image, encode_image_to_data_url(image)
 
     except HTTPException as e:
-        raise e  # Re-raise HTTPExceptions
+        raise e
     except Exception as err:
         logger.error(f"Unexpected processing error: {str(err)}")
         raise HTTPException(500, "Image processing failed")
+
 
 def select_differentials(analysis: str):
     """Selects appropriate differentials based on image analysis results."""
     selected_categories = []
 
+    # Basic keyword detection for categories
     if "scoliosis" in analysis.lower():
         selected_categories.append("Musculoskeletal")
     elif "pneumonia" in analysis.lower():
@@ -156,53 +172,47 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     logger.warning("MONGO_URI environment variable is not set. Any DB-related features may fail.")
 
-############################################
-# New advanced helper to reformat AI text
-def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
-    """
-    Further processes the AI's raw analysis to unify headings, bullet points,
-    and optionally append disclaimers. Also formats a summary bullet section.
-    """
-    # For this advanced prompt, we can enforce a consistent markdown structure
-    # and also optionally remove unwanted lines. Here we just rejoin the text.
-    formatted_lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
-    formatted_text = "\n".join(formatted_lines)
-    
-    # Optionally append disclaimers if required
-    if disclaimers and REQUIRED_DISCLAIMER not in formatted_text:
-        formatted_text += REQUIRED_DISCLAIMER
-
-    return formatted_text
 
 ############################################
-# New helper to incorporate differentials from our dictionary
+# New advanced function to incorporate dictionary data
 def incorporate_differentials(analysis_text: str, categories: list) -> str:
     """
-    Incorporates advanced details from the medical_differentials dictionary into the analysis text.
-    For each detected category, additional dictionary data is appended.
+    Incorporates advanced details from medical_differentials into the analysis text
+    for each detected category. This function demonstrates how we might fetch
+    relevant dictionary entries and append them to the final analysis.
     """
+    # We'll build a block of additional info from the dictionary for the recognized categories
     additional_info = []
-    # For demonstration, we'll use Radiology section for recognized categories
+
     for cat in categories:
+        # Hard-coded top-level "Radiology" for these categories, as an example
+        # In real usage, we'd map "Pulmonary" -> medical_differentials["Radiology"]["Pulmonary"]
+        # or parse subcategories more thoroughly.
         try:
+            # For instance, if cat is "Pulmonary":
             cat_data = medical_differentials["Radiology"][cat]
-            info_lines = [f"**Additional {cat} Differentials:**"]
+            # We create a short summary
+            info_lines = [f"**Additional {cat} Differentials from dictionary:**"]
             for subcat, details in cat_data.items():
                 if isinstance(details, dict):
-                    desc = details.get("Description", "No description available.")
-                    info_lines.append(f"- **{subcat}**: {desc}")
+                    sub_desc = details.get("Description", "")
+                    info_lines.append(f"- **{subcat}**: {sub_desc}")
                 else:
                     info_lines.append(f"- {subcat}: {details}")
             additional_info.append("\n".join(info_lines))
         except KeyError:
-            logger.warning(f"No dictionary entry found for category '{cat}'.")
-            continue
+            # If the category isn't in the dictionary or the structure is mismatched
+            logger.warning(f"No dictionary entry found for {cat} or structure mismatch.")
+            pass
 
     if additional_info:
-        return analysis_text + "\n\n" + "\n\n".join(additional_info)
-    return analysis_text
+        joined = "\n\n".join(additional_info)
+        return analysis_text + "\n\n" + joined
+    else:
+        return analysis_text
 
 ############################################
+
 
 @app.post("/analyze-image/")
 async def analyze_image(
@@ -210,7 +220,7 @@ async def analyze_image(
         age: Optional[int] = Query(None, description="Patient's age"),
         sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
 ) -> dict:
-    """Enhanced image analysis endpoint with expanded AI prompts and integrated differentials."""
+    """Enhanced image analysis endpoint"""
     try:
         if age is not None:
             logger.info(f"Patient age provided: {age}")
@@ -223,34 +233,40 @@ async def analyze_image(
         # Process and validate image
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Expanded system prompt with added instructions:
-        system_prompt = (
-            "You are an advanced medical imaging AI assistant trained to identify and analyze visual patterns in diagnostic imaging. "
-            "Your role is to provide a comprehensive, board-level diagnostic report based solely on visual features. "
-            "Incorporate any relevant patient demographic data if provided, and generate a final summary that includes a concise bullet-point "
-            "overview of key findings and a differential diagnosis. Use heading-level Markdown (## for major sections, ### for subsections) to format your response.\n\n"
-            "Include the following sections:\n"
-            "## Image Characteristics (Certainty: in percentage)\n"
-            "- Modality: [Identified imaging technique]\n"
-            "- Quality: [Technical assessment]\n"
-            "- Findings: [Visual observations]\n\n"
-            "## Pattern Recognition (Certainty: in percentage)\n"
-            "- Anatomical correlations\n"
-            "- Statistical prevalence\n"
-            "- Literature associations\n\n"
-            "## Clinical Considerations (Certainty: in percentage)\n"
-            "- Next-step imaging\n"
-            "- Common differentials\n\n"
-            "## Summary\n"
-            "- Provide a concise, bullet-point summary of key findings and diagnostic suggestions.\n\n"
-        )
+        # System prompt engineering
+        system_prompt = """You are a medical image analysis assistant trained to identify visual patterns in diagnostic imaging.
+Your role is to:
+1. Describe anatomical features and imaging artifacts
+2. Identify statistically significant visual patterns
+3. Compare findings to typical radiographic presentations
+4. Suggest possible diagnostic pathways BASED ON VISUAL FEATURES ONLY
+5. Provide how much it certain.
+
+Format response using:
+**Image Characteristics (Certainty: in percentage)**
+- Modality: [Identified imaging technique]
+- Quality: [Technical assessment]
+- Findings: [Visual observations]
+
+**Pattern Recognition (Certainty: in percentage)**
+- Anatomical correlations
+- Statistical prevalence
+- Literature associations
+
+**Clinical Considerations (Certainty: in percentage)**
+- Next-step imaging
+- Common differentials
+- AI limitations disclaimer"""
 
         messages = [
-            {"role": "system", "content": system_prompt},
+            {
+                "role": "system",
+                "content": system_prompt
+            },
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Analyze this medical image for clinically relevant visual patterns."},
+                    {"type": "text", "text": "Analyze this medical image for clinically relevant visual patterns"},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -265,11 +281,11 @@ async def analyze_image(
             logger.warning("OpenAI client not initialized, skipping analysis.")
             analysis = "AI analysis service unavailable."
         else:
-            # Optimized API parameters for expanded prompt
+            # Optimized API parameters
             response = await client.chat.completions.create(
                 model="gpt-4o",
                 messages=messages,
-                max_tokens=2500,
+                max_tokens=2000,
                 temperature=0.3,
                 top_p=0.9,
                 frequency_penalty=0.5,
@@ -277,18 +293,20 @@ async def analyze_image(
             )
             analysis = response.choices[0].message.content
 
-        # Reformat the analysis text
-        analysis = reformat_analysis(analysis, disclaimers=True)
+        # Insert disclaimers if not already present
+        if REQUIRED_DISCLAIMER not in analysis:
+            analysis += REQUIRED_DISCLAIMER
 
-        # Incorporate differentials from the dictionary if applicable
+        # Identify relevant categories from the analysis text
         detected_categories = select_differentials(analysis)
+        # Incorporate advanced dictionary data for those categories
         analysis = incorporate_differentials(analysis, detected_categories)
 
-        # Secure storage of the report
+        # Secure storage
         if store_report is None:
             logger.warning("store_report function not initialized, skipping report storage.")
         else:
-            store_report(filename, analysis)
+            store_report(filename, analysis)  # Store the (possibly updated) analysis
 
         image_metadata = {
             "dimensions": image.size,
