@@ -8,7 +8,7 @@ radiology_differentials = {
                 "Multifocal infiltrates",
                 "Air bronchograms",
                 "Ground-glass opacity",
-                "Interstitial thickening"  // Added advanced descriptor for atypical or viral pneumonia
+                "Interstitial thickening"  # Added advanced descriptor for atypical or viral pneumonia
             ],
             "risk_factors": [
                 "Advanced age",
@@ -16,9 +16,9 @@ radiology_differentials = {
                 "Chronic lung disease",
                 "Smoking",
                 "Aspiration",
-                "Recent viral infection"  // New risk factor post-COVID-19 era
+                "Recent viral infection"  # New risk factor post-COVID-19 era
             ],
-            "epidemiology": "High prevalence, particularly in winter months; recent studies highlight increased incidence in post-viral settings",
+            "epidemiology": "High prevalence, particularly in winter months; recent studies show increased incidence post-viral infections.",
             "clinical_diagnostic_correlations": [
                 "Fever",
                 "Cough",
@@ -26,16 +26,16 @@ radiology_differentials = {
                 "Elevated WBC count",
                 "Positive sputum culture",
                 "CRP elevation",
-                "Procalcitonin levels"  // Added laboratory marker for bacterial infection
+                "Procalcitonin levels"  # Added laboratory marker for bacterial infection
             ],
             "recommendations": [
                 "Chest X-ray",
-                "CT Chest (if inconclusive or for suspected viral pneumonia)",
+                "CT Chest (if X-ray is inconclusive or for suspected viral pneumonia)",
                 "Sputum culture",
                 "Blood cultures",
                 "Empiric then targeted antibiotic therapy",
                 "Supportive care (oxygen, hydration)",
-                "Consider viral panel or PCR testing for influenza/COVID-19"  // Enhanced recommendations
+                "Consider viral panel or PCR testing for influenza/COVID-19"  # Enhanced recommendations
             ]
         },
         "Pulmonary Embolism": {
@@ -46,7 +46,7 @@ radiology_differentials = {
                 "Right heart strain (RV/LV ratio > 1)",
                 "Pleural effusion",
                 "Mosaic attenuation pattern",
-                "Filling defects on CTPA"  // Added descriptor for CT pulmonary angiography
+                "Filling defects on CTPA"  # Added descriptor for CT pulmonary angiography
             ],
             "risk_factors": [
                 "Immobility",
@@ -58,7 +58,7 @@ radiology_differentials = {
                 "Pregnancy",
                 "Inherited thrombophilia"
             ],
-            "epidemiology": "Moderate prevalence; a leading cause of preventable mortality in hospitalized patients",
+            "epidemiology": "Moderate prevalence; a leading cause of preventable mortality in hospitalized patients.",
             "clinical_diagnostic_correlations": [
                 "Sudden onset dyspnea",
                 "Chest pain",
@@ -69,7 +69,7 @@ radiology_differentials = {
             ],
             "recommendations": [
                 "CT Pulmonary Angiography (CTPA)",
-                "Ventilation/Perfusion (V/Q) scan (if CTPA contraindicated)",
+                "Ventilation/Perfusion (V/Q) scan (if CTPA is contraindicated)",
                 "Pulmonary angiography (rarely used)",
                 "ECG",
                 "Echocardiogram (to assess right heart strain)",
@@ -86,7 +86,7 @@ radiology_differentials = {
                 "Pleural effusion",
                 "Atelectasis",
                 "Rib destruction",
-                "Ground-glass opacity with spiculation"  // Added descriptor for early adenocarcinoma
+                "Ground-glass opacity with spiculation"  # Added descriptor for early adenocarcinoma
             ],
             "risk_factors": [
                 "Smoking",
@@ -94,9 +94,9 @@ radiology_differentials = {
                 "Asbestos exposure",
                 "Family history",
                 "Air pollution",
-                "Previous lung infections"  // New risk factor noted in some studies
+                "Previous lung infections"  # New risk factor noted in recent studies
             ],
-            "epidemiology": "Leading cause of cancer death worldwide; molecular subtyping now guides management",
+            "epidemiology": "Leading cause of cancer death worldwide; molecular subtyping now guides management.",
             "clinical_diagnostic_correlations": [
                 "Chronic cough",
                 "Hemoptysis",
@@ -114,7 +114,7 @@ radiology_differentials = {
                 "Chemotherapy",
                 "Radiation therapy",
                 "Immunotherapy",
-                "Molecular profiling"  // Added for targeted therapy options
+                "Molecular profiling"  # Added for targeted therapy options
             ]
         },
         "COPD (Chronic Obstructive Pulmonary Disease)": {
@@ -124,7 +124,7 @@ radiology_differentials = {
                 "Increased retrosternal air space",
                 "Bullae",
                 "Thickened bronchial walls",
-                "Emphysematous changes with centrilobular patterns"  // Added advanced imaging finding
+                "Emphysematous changes with centrilobular patterns"  # Added advanced imaging finding
             ],
             "risk_factors": [
                 "Smoking",
@@ -132,7 +132,7 @@ radiology_differentials = {
                 "Air pollution",
                 "Occupational exposures"
             ],
-            "epidemiology": "Common chronic respiratory disease; increasing in prevalence globally",
+            "epidemiology": "Common chronic respiratory disease; increasing in prevalence globally.",
             "clinical_diagnostic_correlations": [
                 "Chronic cough",
                 "Sputum production",
@@ -148,6 +148,135 @@ radiology_differentials = {
                 "Inhaled corticosteroids",
                 "Pulmonary rehabilitation",
                 "Oxygen therapy (if hypoxic)"
+            ]
+        }
+    },
+    "Neurological": {
+        "Stroke": {
+            "imaging_descriptors": [
+                "Hyperdense vessel sign",
+                "Loss of gray-white differentiation",
+                "Early ischemic changes (sulcal effacement, cytotoxic edema)",
+                "Diffusion restriction on MRI",
+                "Hemorrhagic transformation"
+            ],
+            "risk_factors": [
+                "Hypertension",
+                "Hyperlipidemia",
+                "Diabetes mellitus",
+                "Smoking",
+                "Atrial fibrillation",
+                "Carotid artery stenosis",
+                "Family history"
+            ],
+            "epidemiology": "High prevalence; major cause of disability and death.",
+            "clinical_diagnostic_correlations": [
+                "Sudden onset neurological deficits",
+                "NIH Stroke Scale score",
+                "FAST exam (Face, Arms, Speech, Time)"
+            ],
+            "recommendations": [
+                "Non-contrast CT brain",
+                "CT Angiography (CTA) of head and neck",
+                "MRI of brain (DWI, ADC, FLAIR)",
+                "ECG (to assess for atrial fibrillation)",
+                "Blood glucose monitoring",
+                "Thrombolysis (if eligible within time window)",
+                "Mechanical thrombectomy (if large vessel occlusion)",
+                "Antiplatelet therapy (aspirin)",
+                "Blood pressure control",
+                "Neurointensive care"
+            ]
+        },
+        "Brain Tumor": {
+            "imaging_descriptors": [
+                "Mass lesion with surrounding edema",
+                "Enhancement with contrast",
+                "Midline shift",
+                "Hydrocephalus",
+                "Intracranial hemorrhage"
+            ],
+            "risk_factors": [
+                "Genetic syndromes (Neurofibromatosis, Tuberous sclerosis)",
+                "Exposure to ionizing radiation"
+            ],
+            "epidemiology": "Relatively rare; can be devastating.",
+            "clinical_diagnostic_correlations": [
+                "Headaches",
+                "Seizures",
+                "Focal neurological deficits",
+                "Papilledema",
+                "Cognitive changes"
+            ],
+            "recommendations": [
+                "MRI of the brain with and without contrast",
+                "Biopsy",
+                "Surgical resection",
+                "Radiation therapy",
+                "Chemotherapy",
+                "Steroids (to reduce edema)"
+            ]
+        },
+        "Multiple Sclerosis (MS)": {
+            "imaging_descriptors": [
+                "Ovoid periventricular lesions",
+                "Dawson's fingers (lesions extending perpendicular to ventricles)",
+                "Enhancing lesions (active inflammation)",
+                "Spinal cord lesions"
+            ],
+            "risk_factors": [
+                "Genetic predisposition",
+                "Vitamin D deficiency",
+                "Epstein-Barr virus infection",
+                "Smoking"
+            ],
+            "epidemiology": "More common in women; prevalent in temperate climates.",
+            "clinical_diagnostic_correlations": [
+                "Optic neuritis",
+                "Transverse myelitis",
+                "Lhermitte's sign",
+                "Fatigue",
+                "Sensory and motor deficits"
+            ],
+            "recommendations": [
+                "MRI of brain and spinal cord with and without contrast",
+                "Lumbar puncture (to assess oligoclonal bands)",
+                "Visual evoked potentials (VEPs)",
+                "Disease-modifying therapies (DMTs)",
+                "Symptomatic treatment"
+            ]
+        }
+    },
+    "Musculoskeletal": {
+        "Fracture": {
+            "imaging_descriptors": [
+                "Bone cortex discontinuity",
+                "Fracture line",
+                "Bone fragment displacement",
+                "Soft tissue swelling"
+            ],
+            "risk_factors": [
+                "Trauma",
+                "Osteoporosis",
+                "Age-related changes",
+                "Repetitive stress",
+                "Underlying bone pathology"
+            ],
+            "epidemiology": "Common in older adults and athletes.",
+            "clinical_diagnostic_correlations": [
+                "Pain",
+                "Swelling",
+                "Deformity",
+                "Limited range of motion",
+                "Tenderness"
+            ],
+            "recommendations": [
+                "X-Ray",
+                "CT scan",
+                "MRI",
+                "Immobilization",
+                "Pain management",
+                "Surgical fixation (if required)"
             ]
         }
     }
