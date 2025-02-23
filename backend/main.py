@@ -3,12 +3,13 @@ import io
 import base64
 import logging
 import asyncio
+from functools import lru_cache
 from typing import Tuple, Optional
 
 import numpy as np
 import pydicom
 from PIL import Image, UnidentifiedImageError
-import requests  # For PubMed API calls
+import httpx  # For asynchronous HTTP requests to PubMed
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,14 +20,14 @@ try:
     from models import store_report
 except ImportError as e:
     logging.error(f"Error importing models: {e}")
-    store_report = None  # Or define a dummy function
+    store_report = None
 
 try:
     from config import OPENAI_API_KEY
 except ImportError as e:
     logging.error(f"Error importing config: {e}")
     OPENAI_API_KEY = None
-    exit()  # Stop execution if the config is not working.
+    exit()  # Critical error; stop execution if config is missing.
 
 # Import differentials and evidence-based guidelines
 from differentials import medical_differentials, evidence_based_guidelines
@@ -38,18 +39,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ProdMedicalImagingAI")
 
-# Asynchronous OpenAI client
+# Asynchronous OpenAI client initialization
 try:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 except ImportError as e:
-    logging.error(f"Error importing or initializing OpenAI: {e}")
+    logger.error(f"Error initializing OpenAI: {e}")
     client = None
 
 app = FastAPI(
-    title="Medical Imaging AI with Evidence & PubMed",
-    description="Advanced diagnostic pattern analysis for medical imaging with evidence-based guidelines and real PubMed references.",
-    version="3.0.0",
+    title="Medical Imaging AI with PubMed",
+    description="Advanced diagnostic pattern analysis for medical imaging with real-time evidence-based PubMed references.",
+    version="3.1.0",
 )
 
 app.add_middleware(
@@ -62,7 +63,7 @@ app.add_middleware(
 
 # Constants
 MIN_RESOLUTION = 512
-REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis – Must be validated by board-certified radiologist*"
+REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
 
 ############################################
 # Helper Functions
@@ -113,9 +114,8 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             except Exception as e:
                 logger.error(f"Standard image processing error: {e}")
                 raise HTTPException(500, "Image processing failed")
-
         if min(image.size) < MIN_RESOLUTION:
-            logger.warning(f"Image {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing...")
+            logger.warning(f"Low resolution {image.size}; resizing to {MIN_RESOLUTION}x{MIN_RESOLUTION}.")
             w, h = image.size
             if w < h:
                 new_w = MIN_RESOLUTION
@@ -128,25 +128,26 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
     except HTTPException as e:
         raise e
     except Exception as err:
-        logger.error(f"Unexpected error: {err}")
+        logger.error(f"Unexpected image processing error: {err}")
         raise HTTPException(500, "Image processing failed")
 
 def select_differentials(analysis: str):
-    """Selects differential categories based on analysis text."""
+    """Selects differential categories based on the AI analysis text."""
     selected = []
-    if "pacemaker" in analysis.lower():
+    lower_text = analysis.lower()
+    if "pacemaker" in lower_text:
         selected.append("Cardiology")
-    if "consolidation" in analysis.lower():
+    if "consolidation" in lower_text or "infiltrate" in lower_text:
         selected.append("Pulmonary")
-    if "scoliosis" in analysis.lower():
+    if "scoliosis" in lower_text:
         selected.append("Musculoskeletal")
-    # Additional rules can be added
+    # Extend with additional rules as needed
     return selected
 
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
-    Reformats the AI analysis text to standardize headings and remove excessive jargon.
-    Uses plain language to provide a clear summary.
+    Reformats the AI analysis text by removing extra spaces and standardizing headings.
+    Emphasizes plain language and evidence-based conclusions.
     """
     lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
     formatted = "\n".join(lines)
@@ -155,9 +156,7 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     return formatted
 
 def incorporate_differentials(analysis_text: str, categories: list) -> str:
-    """
-    Appends additional differential diagnosis details from the medical_differentials dictionary.
-    """
+    """Appends differential diagnosis details from the medical_differentials dictionary."""
     add_info = []
     for cat in categories:
         try:
@@ -171,16 +170,14 @@ def incorporate_differentials(analysis_text: str, categories: list) -> str:
                     info_lines.append(f"- {subcat}: {details}")
             add_info.append("\n".join(info_lines))
         except KeyError:
-            logger.warning(f"No entry found for category '{cat}'.")
+            logger.warning(f"No dictionary entry found for category '{cat}'.")
             continue
     if add_info:
         return analysis_text + "\n\n" + "\n\n".join(add_info)
     return analysis_text
 
 def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
-    """
-    Appends a summary of evidence-based guidelines.
-    """
+    """Appends a simplified summary of evidence-based guidelines to the analysis text."""
     guide_lines = []
     for org, topics in guidelines.items():
         guide_lines.append(f"**{org} Guidelines Summary:**")
@@ -198,26 +195,22 @@ def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
 
 def extract_pubmed_query(analysis_text: str) -> str:
     """
-    Attempts to extract a focused query term from the analysis.
-    For example, if 'pacemaker' is mentioned, use it in the query.
+    Extracts a focused PubMed query based on key findings in the analysis text.
     """
     lower_text = analysis_text.lower()
     if "pacemaker" in lower_text:
         return "pacemaker leads chest x-ray"
-    elif "consolidation" in lower_text:
-        return "lung consolidation x-ray"
+    elif "consolidation" in lower_text or "infiltrate" in lower_text:
+        return "lung consolidation chest x-ray"
     else:
-        return "chest x-ray findings"
-
-# PubMed integration: synchronous function with caching for efficiency
-from functools import lru_cache
+        return "chest x-ray diagnostic findings"
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
-    """Queries PubMed for articles related to the query and returns a list of formatted references."""
+    """Synchronous function to query PubMed and return a list of formatted article references."""
     pubmed_api = os.getenv("PUB_MED_API")
     if not pubmed_api:
-        logger.warning("PUB_MED_API not set. Skipping PubMed integration.")
+        logger.warning("PUB_MED_API is not set. Skipping PubMed references.")
         return ["No PubMed API key provided."]
     
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -261,7 +254,6 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
             link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
             references.append(f"**{title}** ({pubdate}, {source}) [Read more]({link})")
         return references
-
     except Exception as e:
         logger.error(f"Error querying PubMed: {e}")
         return [f"Error retrieving PubMed references: {str(e)}"]
@@ -281,7 +273,10 @@ async def analyze_image(
     age: Optional[int] = Query(None, description="Patient's age"),
     sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
 ) -> dict:
-    """Enhanced image analysis endpoint with advanced AI prompts, differentials, guidelines, and PubMed integration."""
+    """
+    Advanced image analysis endpoint with AI diagnostic report generation,
+    evidence-based guidelines, and real-time PubMed references.
+    """
     try:
         if age is not None:
             logger.info(f"Patient age provided: {age}")
@@ -293,22 +288,22 @@ async def analyze_image(
 
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Build the system prompt with clear, plain language instructions
+        # Build advanced system prompt with clear plain language instructions
         system_prompt = (
-            "You are a medical imaging AI assistant. Analyze the diagnostic image and provide a clear, evidence-based report in plain language. "
-            "Structure your response using heading-level Markdown with the following sections:\n\n"
+            "You are a medical imaging AI assistant. Analyze the diagnostic image and generate a clear, evidence-based report in plain language. "
+            "Structure your response with the following headings (use Markdown):\n\n"
             "## Image Characteristics (Certainty: in percentage)\n"
-            "- Modality: \n"
-            "- Quality: \n"
-            "- Findings: \n\n"
+            "- Modality:\n"
+            "- Quality:\n"
+            "- Findings:\n\n"
             "## Pattern Recognition (Certainty: in percentage)\n"
-            "- Key visual patterns and correlations: \n\n"
+            "- Key visual patterns and correlations:\n\n"
             "## Clinical Considerations (Certainty: in percentage)\n"
-            "- Recommended next steps: \n"
-            "- Common differentials: \n\n"
+            "- Recommended next steps:\n"
+            "- Common differentials:\n\n"
             "## Summary\n"
             "- Concise bullet-point overview of key findings.\n\n"
-            "Use simple, plain language and evidence-based conclusions. Incorporate patient demographics (age, sex) if provided. "
+            "Use simple, plain language. Incorporate patient demographics if available. "
             "Avoid excessive technical jargon."
         )
 
@@ -317,14 +312,13 @@ async def analyze_image(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Analyze this medical image for clinically relevant findings."},
+                    {"type": "text", "text": "Analyze this image for clinically relevant findings."},
                     {"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}
                 ]
             }
         ]
-
         if client is None:
-            logger.warning("OpenAI client not initialized, skipping analysis.")
+            logger.warning("OpenAI client not initialized; returning fallback message.")
             analysis = "AI analysis service unavailable."
         else:
             response = await client.chat.completions.create(
@@ -338,18 +332,16 @@ async def analyze_image(
             )
             analysis = response.choices[0].message.content
 
-        # Reformat and enhance the AI analysis
         analysis = reformat_analysis(analysis, disclaimers=True)
         detected_categories = select_differentials(analysis)
         analysis = incorporate_differentials(analysis, detected_categories)
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines)
-
-        # Use analysis content to generate a focused PubMed query
+        
+        # Extract focused PubMed query and fetch references
         pubmed_query = extract_pubmed_query(analysis)
         pubmed_refs = await fetch_pubmed_references(pubmed_query, max_results=3)
         analysis += "\n\n" + pubmed_refs
 
-        # Optionally, store the report
         if store_report is not None:
             store_report(filename, analysis)
 
@@ -374,12 +366,11 @@ async def analyze_image(
 def extract_pubmed_query(analysis_text: str) -> str:
     """
     Extracts a focused PubMed query based on key terms in the analysis.
-    For example, if 'pacemaker' is mentioned, returns a query specific to pacemaker leads.
     """
     lower_text = analysis_text.lower()
     if "pacemaker" in lower_text:
         return "pacemaker leads chest x-ray"
-    elif "consolidation" in lower_text:
+    elif "consolidation" in lower_text or "infiltrate" in lower_text:
         return "lung consolidation chest x-ray"
     else:
         return "chest x-ray diagnostic findings"
@@ -388,7 +379,7 @@ def extract_pubmed_query(analysis_text: str) -> str:
 def download_report(filename: str, format: str = "json"):
     """
     Endpoint to download the stored AI report in JSON format.
-    Extendable to PDF if required.
+    Extendable to support PDF downloads.
     """
     file_path = f"./reports/{filename}.json"
     if not os.path.exists(file_path):
