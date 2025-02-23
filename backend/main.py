@@ -30,7 +30,7 @@ except ImportError as e:
     OPENAI_API_KEY = None
     exit()  # Stop execution if config is missing
 
-# Extra API key validation check
+# Extra API key validation check - Ensure the key is valid before proceeding
 if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
     logging.error("Invalid or missing OpenAI API key. Please check your configuration.")
     exit()
@@ -74,11 +74,13 @@ REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis – Must be validated by a boa
 # Helper functions
 
 def encode_image_to_data_url(image: Image.Image) -> str:
+    """Converts a PIL Image to a base64-encoded data URL."""
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
 
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
+    """Checks for essential DICOM tags."""
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing = [tag for tag in required_tags if tag not in dicom_obj]
     if missing:
@@ -86,6 +88,7 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
         raise HTTPException(400, f"Incomplete DICOM metadata: {', '.join(missing)}")
 
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
+    """Processes the uploaded image (DICOM or standard) and ensures minimum resolution."""
     try:
         if filename.endswith(".dcm"):
             dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
@@ -98,6 +101,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
         
+        # Resize if image resolution is below the minimum threshold
         if min(image.size) < MIN_RESOLUTION:
             w, h = image.size
             if w < h:
@@ -116,6 +120,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         raise HTTPException(500, "Image processing failed.")
 
 def select_differentials(analysis: str):
+    """Selects differential categories based on the AI analysis text."""
     selected = []
     text = analysis.lower()
     if "pacemaker" in text:
@@ -127,6 +132,10 @@ def select_differentials(analysis: str):
     return selected
 
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
+    """
+    Reformats the AI analysis text by standardizing headings and bullet points.
+    Emphasizes plain language and evidence-based conclusions.
+    """
     lines = [l.strip() for l in analysis_text.splitlines() if l.strip()]
     formatted = "\n".join(lines)
     if disclaimers and REQUIRED_DISCLAIMER not in formatted:
@@ -134,6 +143,7 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     return formatted
 
 def incorporate_differentials(analysis_text: str, categories: list) -> str:
+    """Appends additional differential diagnosis details from the medical_differentials dictionary."""
     extra_info = []
     for cat in categories:
         try:
@@ -154,6 +164,7 @@ def incorporate_differentials(analysis_text: str, categories: list) -> str:
     return analysis_text
 
 def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
+    """Appends a simplified summary of evidence-based guidelines to the analysis text."""
     glines = []
     for org, topics in guidelines.items():
         glines.append(f"**{org} Guidelines Summary:**")
@@ -170,6 +181,9 @@ def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
     return analysis_text
 
 def extract_pubmed_query(analysis_text: str) -> str:
+    """
+    Extracts a focused PubMed query based on key terms in the analysis text.
+    """
     txt = analysis_text.lower()
     if "pacemaker" in txt:
         return "pacemaker leads chest x-ray"
@@ -180,6 +194,9 @@ def extract_pubmed_query(analysis_text: str) -> str:
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
+    """
+    Queries PubMed for articles related to the query and returns a list of formatted references using httpx.
+    """
     pubmed_api = os.getenv("PUB_MED_API")
     if not pubmed_api:
         return ["No PubMed API key provided."]
@@ -227,6 +244,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
         return [f"Error retrieving PubMed references: {str(e)}"]
 
 async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
+    """Asynchronous wrapper to fetch PubMed references."""
     refs = await asyncio.to_thread(fetch_pubmed_articles_sync, query, max_results)
     if refs:
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
