@@ -2,7 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Overrides (Optional) */
+/* Global Overrides */
 body {
-  @apply bg-gray-100;
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Dark mode global styles */
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}
+
+/* Example: Customize headings */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold tracking-tight;
+}
+
+/* Example: Remove default margin from paragraphs */
+p {
+  @apply m-0 mb-4;
+}
+
+/* Example: Ensure links have a consistent style */
+a {
+  @apply text-blue-600 hover:underline;
 }

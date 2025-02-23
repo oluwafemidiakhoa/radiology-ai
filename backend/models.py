@@ -1,9 +1,7 @@
-# models.py
 from pymongo import MongoClient
 import os
-import io
 import logging
-from dotenv import load_dotenv  # Import load_dotenv
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
@@ -12,15 +10,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Load the .env file from the backend directory
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')  # Construct the path
-load_dotenv(dotenv_path=dotenv_path)  # Load the variables
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path)
 
 # Get the MongoDB URI components from environment variables
-MONGO_USERNAME = os.getenv("MONGO_USERNAME", "ethagagroalliedltd")  # Default username
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "hV5wlRUhbvh9qhZt")  # Required password
-MONGO_CLUSTER = os.getenv("MONGO_CLUSTER", "radiologyal.1n3v2.mongodb.net")  # Default cluster
+MONGO_USERNAME = os.getenv("MONGO_USERNAME", "ethagagroalliedltd")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "hV5wlRUhbvh9qhZt")
+MONGO_CLUSTER = os.getenv("MONGO_CLUSTER", "radiologyal.1n3v2.mongodb.net")
 
-# Construct the MongoDB URI
+# Construct the MongoDB URI if not in testing mode
 MONGO_URI = None
 if os.getenv("TESTING") != "True":
     if MONGO_PASSWORD:
@@ -29,9 +27,7 @@ if os.getenv("TESTING") != "True":
             "?retryWrites=true&w=majority&appName=RadiologyAl"
         )
     else:
-        logger.error(
-            "MONGO_PASSWORD environment variable not set! Database connection will fail."
-        )
+        logger.error("MONGO_PASSWORD environment variable not set! Database connection will fail.")
 else:
     logger.info("TESTING environment detected. Skipping MongoDB connection.")
 
@@ -42,18 +38,16 @@ reports_collection = None
 try:
     if MONGO_URI:
         client = MongoClient(MONGO_URI)
-        client.admin.command('ping')  # Check connection
+        client.admin.command("ping")  # Verify connection
         db = client["radiology_db"]
         reports_collection = db["ai_reports"]
-        logger.info("Connected to MongoDB and obtained ai_reports collection.")
+        logger.info("Connected to MongoDB and obtained 'ai_reports' collection.")
     else:
         if os.getenv("TESTING") != "True":
             raise ValueError("MONGO_URI is not defined. Cannot connect to MongoDB.")
-
 except Exception as e:
     if os.getenv("TESTING") != "True":
         logger.error(f"Error connecting to MongoDB or accessing collection: {e}")
-        # Re-raise the exception to prevent the app from starting if the DB fails
         raise
 
 def store_report(filename: str, report: str):
@@ -61,7 +55,7 @@ def store_report(filename: str, report: str):
     Stores the analysis report along with the filename into the MongoDB 'ai_reports' collection.
     """
     try:
-        # Use 'is not None' instead of a simple boolean check
+        # Use an explicit check for None
         if reports_collection is not None:
             document = {"filename": filename, "report": report}
             result = reports_collection.insert_one(document)

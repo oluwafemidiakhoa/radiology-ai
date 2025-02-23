@@ -1,15 +1,21 @@
-import requests
 import os
+import logging
+import httpx
 
-# PubMed API Key
-PUBMED_API_KEY = os.getenv("PUB_MED_API")  # Ensure it's set in your environment
+logger = logging.getLogger("PubMed")
+logger.setLevel(logging.INFO)
+
+# Read PubMed API key from environment
+PUBMED_API_KEY = os.getenv("PUB_MED_API")
+if not PUBMED_API_KEY:
+    logger.error("PUB_MED_API is not set in the environment. PubMed references will not be fetched.")
 
 def fetch_pubmed_articles(query, max_results=5):
     """
     Fetches relevant PubMed articles based on the given query.
     Returns a list of formatted references.
     """
-    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     
     params = {
         "db": "pubmed",
@@ -19,41 +25,53 @@ def fetch_pubmed_articles(query, max_results=5):
         "api_key": PUBMED_API_KEY
     }
     
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    if "esearchresult" in data and "idlist" in data["esearchresult"]:
-        article_ids = data["esearchresult"]["idlist"]
-        return fetch_article_details(article_ids)
-    return []
+    try:
+        logger.info(f"Searching PubMed with query: {query}")
+        response = httpx.get(esearch_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        id_list = data.get("esearchresult", {}).get("idlist", [])
+        if not id_list:
+            logger.info("No relevant article IDs found for query.")
+            return ["No relevant PubMed articles found."]
+        return fetch_article_details(id_list)
+    except Exception as e:
+        logger.error(f"Error fetching PubMed articles: {e}")
+        return [f"Error retrieving PubMed references: {str(e)}"]
 
 def fetch_article_details(article_ids):
     """
-    Retrieves detailed information (title, authors, journal, link) for PubMed articles.
+    Retrieves detailed information for PubMed articles (title, journal, pubdate, link).
+    Returns a list of formatted reference strings.
     """
     if not article_ids:
         return ["No relevant PubMed references found."]
     
-    details_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
     params = {
         "db": "pubmed",
         "id": ",".join(article_ids),
         "retmode": "json",
         "api_key": PUBMED_API_KEY
     }
-
-    response = requests.get(details_url, params=params)
-    data = response.json()
     
-    articles = []
-    for article_id in article_ids:
-        if article_id in data["result"]:
-            article = data["result"][article_id]
-            title = article.get("title", "No title available")
-            journal = article.get("source", "Unknown journal")
-            pubdate = article.get("pubdate", "Unknown date")
-            link = f"https://pubmed.ncbi.nlm.nih.gov/{article_id}/"
-
-            articles.append(f"{title} - {journal} ({pubdate}) [Read more]({link})")
-
-    return articles
+    try:
+        response = httpx.get(esummary_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        result = data.get("result", {})
+        references = []
+        for pid in article_ids:
+            article = result.get(pid)
+            if article:
+                title = article.get("title", "No title available")
+                journal = article.get("source", "Unknown journal")
+                pubdate = article.get("pubdate", "Unknown date")
+                link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
+                references.append(f"**{title}** - {journal} ({pubdate}) [Read more]({link})")
+        if not references:
+            return ["No relevant PubMed articles found."]
+        return references
+    except Exception as e:
+        logger.error(f"Error fetching article details: {e}")
+        return [f"Error retrieving PubMed references: {str(e)}"]

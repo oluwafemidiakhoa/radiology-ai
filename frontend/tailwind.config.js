@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class',
+  darkMode: 'class', // Enable dark mode via a CSS class
   content: [
     "./src/**/*.{js,jsx,ts,tsx,html}",
     "./public/index.html",
@@ -8,6 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Import and extend Tailwind's default color palette
         ...require('tailwindcss/colors'),
         diagnostic: {
           blue: {
@@ -17,13 +18,13 @@ module.exports = {
             300: '#84c0ff',
             400: '#5baaff',  // Certainty percentage color
             500: '#3395ff',
-            600: '#1e7fe6',   // Light mode certainty
+            600: '#1e7fe6',  // Light mode certainty
             700: '#1661b3',
             800: '#0f4380',
             900: '#07254d',
           },
-          red: '#dc2626',     // Critical findings
-          highlight: '#22c55e' // Important markers
+          red: '#dc2626',       // Critical findings
+          highlight: '#22c55e'  // For important markers
         },
         brandDark: '#1A1A1A',
       },
@@ -45,9 +46,9 @@ module.exports = {
         'medical-card': '420px',
       },
       boxShadow: {
-        'md-light': '0 4px 6px -1px rgba(0,0,0,0.05)',
-        'medical': '0 8px 24px rgba(2, 132, 199, 0.15)', // Blue-based shadow
-        'medical-dark': '0 8px 24px rgba(2, 132, 199, 0.25)'
+        'md-light': '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+        medical: '0 8px 24px rgba(2, 132, 199, 0.15)', // Blue-based shadow for light mode
+        'medical-dark': '0 8px 24px rgba(2, 132, 199, 0.25)', // Dark mode variant
       },
       transitionTimingFunction: {
         'in-out-quad': 'cubic-bezier(0.45, 0, 0.55, 1)',
@@ -61,6 +62,7 @@ module.exports = {
             '--tw-prose-code': theme('colors.diagnostic.red'),
             '--tw-prose-bold': theme('colors.diagnostic.blue.800'),
             '--tw-prose-bullets': theme('colors.diagnostic.blue.400'),
+            // Dark mode styles for medical typography
             '.dark &': {
               '--tw-prose-body': theme('colors.gray.200'),
               '--tw-prose-headings': theme('colors.diagnostic.blue.200'),
@@ -68,7 +70,7 @@ module.exports = {
               '--tw-prose-code': theme('colors.diagnostic.red'),
               '--tw-prose-bold': theme('colors.diagnostic.blue.300'),
               '--tw-prose-bullets': theme('colors.diagnostic.blue.600'),
-            }
+            },
           },
         },
       }),
