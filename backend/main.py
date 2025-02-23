@@ -216,8 +216,10 @@ def format_clinical_report(text: str) -> str:
         "## Clinical Correlation",
         "## Recommended Actions"
     ]
-    return "\n\n".join(f"{section}\n{content}" 
-                      for section, content in zip(sections, text.split("\n\n")) + ACR_DISCLAIMER
+    return "\n\n".join(
+        f"{section}\n{content}" 
+        for section, content in zip(sections, text.split("\n\n"))
+    ) + ACR_DISCLAIMER
 
 def detect_clinical_conditions(report: str) -> list:
     """Advanced condition detection"""
@@ -226,8 +228,11 @@ def detect_clinical_conditions(report: str) -> list:
         "fracture": ["fracture", "break", "cortical disruption"],
         "cardiomegaly": ["ctr", "cardiac enlargement"]
     }
-    return [condition for condition, terms in keywords.items()
-            if any(term in report.lower() for term in terms)]
+    return [
+        condition 
+        for condition, terms in keywords.items()
+        if any(term in report.lower() for term in terms)
+    ]
 
 def integrate_medical_guidelines(report: str, conditions: list) -> str:
     """Evidence-based guideline integration"""
@@ -236,7 +241,6 @@ def integrate_medical_guidelines(report: str, conditions: list) -> str:
             report += f"\n\n**{condition.upper()} GUIDELINES:**\n"
             report += "\n".join(f"- {rec}" for rec in medical_differentials[condition])
     return report
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
