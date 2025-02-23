@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 import numpy as np
 import pydicom
 from PIL import Image, UnidentifiedImageError
-import httpx  # Using httpx for HTTP calls
+import httpx  # Using httpx exclusively for HTTP requests
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,14 +22,15 @@ except ImportError as e:
     logging.error(f"Error importing models: {e}")
     store_report = None
 
+# Load configuration
 try:
     from config import OPENAI_API_KEY
 except ImportError as e:
     logging.error(f"Error importing config: {e}")
     OPENAI_API_KEY = None
-    exit()  # Stop execution if the config is not working.
+    exit()  # Stop execution if the config is not available
 
-# Import differentials and evidence-based guidelines
+# Import differential diagnosis and evidence-based guidelines dictionaries
 from differentials import medical_differentials, evidence_based_guidelines
 
 # Enhanced logging configuration
@@ -49,7 +50,7 @@ except ImportError as e:
 
 app = FastAPI(
     title="Medical Imaging AI with PubMed",
-    description="Advanced diagnostic pattern analysis for medical imaging with real-time evidence-based PubMed references.",
+    description="Advanced diagnostic analysis for medical imaging integrating evidence-based guidelines and real-time PubMed references.",
     version="3.1.0",
 )
 
@@ -93,7 +94,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 norm_array = ((pixel_array - np.min(pixel_array)) / (np.ptp(pixel_array)) * 255).astype(np.uint8)
                 image = Image.fromarray(norm_array)
                 if "WindowCenter" in dicom_obj:
-                    logger.info(f"DICOM windowing: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
+                    logger.info(f"DICOM windowing applied: Center={dicom_obj.WindowCenter}, Width={dicom_obj.WindowWidth}")
             except pydicom.errors.InvalidDicomError as e:
                 logger.error(f"Invalid DICOM file: {e}")
                 raise HTTPException(400, "Invalid DICOM file")
@@ -115,7 +116,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 logger.error(f"Standard image processing error: {e}")
                 raise HTTPException(500, "Image processing failed")
         if min(image.size) < MIN_RESOLUTION:
-            logger.warning(f"Low resolution {image.size}; resizing to maintain minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}.")
+            logger.warning(f"Image resolution {image.size} is below minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}. Resizing...")
             w, h = image.size
             if w < h:
                 new_w = MIN_RESOLUTION
@@ -141,6 +142,7 @@ def select_differentials(analysis: str):
         selected.append("Pulmonary")
     if "scoliosis" in lower_text:
         selected.append("Musculoskeletal")
+    # Extend with additional rules as needed
     return selected
 
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
@@ -206,7 +208,7 @@ def extract_pubmed_query(analysis_text: str) -> str:
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
-    """Queries PubMed for articles related to the query and returns a list of formatted references using httpx."""
+    """Queries PubMed for articles related to the query using httpx and returns formatted references."""
     pubmed_api = os.getenv("PUB_MED_API")
     if not pubmed_api:
         logger.warning("PUB_MED_API not set. Skipping PubMed references.")
@@ -225,7 +227,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
     try:
         search_resp = httpx.get(esearch_url, params=params)
         if search_resp.status_code != 200:
-            logger.error(f"PubMed search failed with status: {search_resp.status_code}")
+            logger.error(f"PubMed search failed with status {search_resp.status_code}: {search_resp.text}")
             return ["PubMed search failed."]
         search_data = search_resp.json()
         id_list = search_data.get("esearchresult", {}).get("idlist", [])
@@ -240,7 +242,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
         }
         summary_resp = httpx.get(esummary_url, params=params)
         if summary_resp.status_code != 200:
-            logger.error(f"PubMed summary retrieval failed with status: {summary_resp.status_code}")
+            logger.error(f"PubMed summary retrieval failed with status {summary_resp.status_code}: {summary_resp.text}")
             return ["PubMed summary retrieval failed."]
         summary_data = summary_resp.json().get("result", {})
         
@@ -287,7 +289,7 @@ async def analyze_image(
 
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Build the system prompt with plain language and evidence-based instructions
+        # Build the system prompt with plain language instructions
         system_prompt = (
             "You are a medical imaging AI assistant. Analyze the diagnostic image and generate a clear, evidence-based report in plain language. "
             "Structure your response using Markdown with the following sections:\n\n"
@@ -335,7 +337,7 @@ async def analyze_image(
         analysis = incorporate_differentials(analysis, detected_categories)
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines)
         
-        # Extract a focused PubMed query and fetch references
+        # Extract focused PubMed query and fetch references
         pubmed_query = extract_pubmed_query(analysis)
         pubmed_refs = await fetch_pubmed_references(pubmed_query, max_results=3)
         analysis += "\n\n" + pubmed_refs
@@ -361,18 +363,6 @@ async def analyze_image(
         logger.error(f"Analysis pipeline failed: {err}")
         raise HTTPException(500, "AI analysis service unavailable")
 
-def extract_pubmed_query(analysis_text: str) -> str:
-    """
-    Extracts a focused PubMed query based on key terms in the analysis.
-    """
-    lower_text = analysis_text.lower()
-    if "pacemaker" in lower_text:
-        return "pacemaker leads chest x-ray"
-    elif "consolidation" in lower_text or "infiltrate" in lower_text:
-        return "lung consolidation chest x-ray"
-    else:
-        return "chest x-ray diagnostic findings"
-
 @app.get("/download-report/{filename}")
 def download_report(filename: str, format: str = "json"):
     """
@@ -385,7 +375,7 @@ def download_report(filename: str, format: str = "json"):
     if format == "json":
         return FileResponse(file_path, media_type="application/json", filename=f"{filename}.json")
     else:
-        raise HTTPException(400, "Unsupported format. Only 'json' is available at this time.")
+        raise HTTPException(400, "Unsupported format. Only 'json' is available.")
 
 if __name__ == "__main__":
     import uvicorn
