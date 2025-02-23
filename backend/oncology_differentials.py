@@ -9,7 +9,7 @@ oncology_differentials = {
             "Nipple retraction",
             "Skin thickening",
             "Lymphadenopathy",
-            "Ductal irregularities"  // Added additional descriptor
+            "Ductal irregularities"  # Added additional descriptor
         ],
         "risk_factors": [
             "Age",
@@ -19,9 +19,9 @@ oncology_differentials = {
             "Nulliparity or late first pregnancy",
             "Hormone replacement therapy",
             "Obesity",
-            "Alcohol consumption"  // New risk factor in some epidemiologic studies
+            "Alcohol consumption"  # New risk factor in some studies
         ],
-        "epidemiology": "Most common cancer in women worldwide; increased incidence in high-risk groups",
+        "epidemiology": "Most common cancer in women worldwide; increased incidence in high-risk populations.",
         "clinical_diagnostic_correlations": [
             "Palpable breast mass",
             "Nipple discharge",
@@ -41,7 +41,7 @@ oncology_differentials = {
             "Hormone therapy",
             "Targeted therapy",
             "Immunotherapy",
-            "Molecular subtyping (e.g., HER2, ER, PR status)"  // Enhanced recommendation
+            "Molecular subtyping (e.g., HER2, ER, PR status)"  # Enhanced recommendation
         ]
     },
     "Prostate Cancer": {
@@ -50,7 +50,7 @@ oncology_differentials = {
             "Reduced diffusion on MRI",
             "Elevated choline/citrate ratio on MR spectroscopy",
             "Bone metastases",
-            "Heterogeneous signal intensity"  // Added for more detailed imaging description
+            "Heterogeneous signal intensity"  # Added advanced imaging descriptor
         ],
         "risk_factors": [
             "Age",
@@ -59,9 +59,9 @@ oncology_differentials = {
             "High-fat diet",
             "Obesity"
         ],
-        "epidemiology": "Most common cancer in men; incidence increases with age",
+        "epidemiology": "Most common cancer in men; incidence increases with age.",
         "clinical_diagnostic_correlations": [
-            "Elevated PSA level",
+            "Elevated PSA",
             "Urinary symptoms (frequency, urgency, nocturia)",
             "Bone pain (if metastatic)",
             "Erectile dysfunction"
@@ -77,7 +77,7 @@ oncology_differentials = {
             "Radiation therapy",
             "Hormone therapy",
             "Chemotherapy",
-            "Molecular profiling"  // Added for precision medicine approaches
+            "Molecular profiling"  # For precision medicine approaches
         ]
     },
     "Colorectal Cancer": {
@@ -88,7 +88,7 @@ oncology_differentials = {
             "Lymph node metastases",
             "Liver metastases",
             "Peritoneal implants",
-            "Mucosal irregularities"  // New descriptor
+            "Mucosal irregularities"  # New descriptor
         ],
         "risk_factors": [
             "Age",
@@ -99,7 +99,7 @@ oncology_differentials = {
             "Obesity",
             "Alcohol consumption"
         ],
-        "epidemiology": "Third most common cancer worldwide; screening programs reduce mortality",
+        "epidemiology": "Third most common cancer worldwide; effective screening reduces mortality.",
         "clinical_diagnostic_correlations": [
             "Change in bowel habits",
             "Rectal bleeding",
