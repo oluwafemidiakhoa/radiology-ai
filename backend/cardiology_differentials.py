@@ -1,6 +1,6 @@
 # cardiology_differentials.py
 # Advanced Cardiology Differential Diagnosis Dictionary
-# Detailed diagnostic criteria, imaging features, and recommendations for key cardiac conditions.
+# This module contains detailed diagnostic criteria, imaging features, risk factors, and recommendations for key cardiac conditions.
 
 cardiology_differentials = {
     "Myocardial Infarction (MI)": {
@@ -9,7 +9,7 @@ cardiology_differentials = {
             "Reduced ejection fraction",
             "Late gadolinium enhancement (scarring)",
             "Coronary artery stenosis or occlusion",
-            "Microvascular obstruction"  # Advanced descriptor
+            "Microvascular obstruction"
         ],
         "risk_factors": [
             "Hypertension",
@@ -20,29 +20,29 @@ cardiology_differentials = {
             "Obesity",
             "Sedentary lifestyle"
         ],
-        "epidemiology": "A leading cause of morbidity and mortality worldwide; early detection is essential for improved outcomes.",
+        "epidemiology": "A leading cause of morbidity and mortality worldwide; early detection is critical for improving outcomes.",
         "clinical_diagnostic_correlations": [
             "Chest pain",
             "Shortness of breath",
             "Diaphoresis",
             "Nausea",
-            "ECG changes (ST-segment elevation or depression, T-wave inversion)",
+            "ECG changes (ST-segment elevation/depression, T-wave inversion)",
             "Elevated cardiac biomarkers (troponin)",
             "Killip classification for risk stratification"
         ],
         "recommendations": [
-            "Electrocardiogram (ECG) immediately",
-            "Cardiac biomarkers (troponin, CK-MB)",
+            "Immediate ECG",
+            "Cardiac biomarkers assessment",
             "Coronary angiography",
-            "Percutaneous coronary intervention (PCI) if indicated",
-            "Thrombolytic therapy (if PCI unavailable)",
-            "Dual antiplatelet therapy (aspirin, clopidogrel)",
+            "Percutaneous coronary intervention (PCI)",
+            "Thrombolytic therapy if PCI is unavailable",
+            "Dual antiplatelet therapy",
             "Beta-blockers, ACE inhibitors, and statins",
             "Oxygen supplementation",
-            "Consider cardiac MRI for viability and scar assessment"
+            "Consider cardiac MRI for viability assessment"
         ],
         "recent_research": "Emerging imaging biomarkers and AI-driven analysis are enhancing early MI detection and risk stratification.",
-        "ml_insights": "Hybrid deep learning models are now used to predict infarct size and potential recovery based on imaging features."
+        "ml_insights": "Hybrid deep learning models predict infarct size and potential recovery with high accuracy."
     },
     "Heart Failure": {
         "imaging_descriptors": [
@@ -53,7 +53,7 @@ cardiology_differentials = {
             "Reduced ejection fraction",
             "Mitral regurgitation",
             "Tricuspid regurgitation",
-            "Diastolic dysfunction"  # New descriptor for HFpEF
+            "Diastolic dysfunction"
         ],
         "risk_factors": [
             "Hypertension",
@@ -64,26 +64,26 @@ cardiology_differentials = {
             "Alcohol abuse",
             "Family history"
         ],
-        "epidemiology": "Increasing prevalence in aging populations; major cause of hospitalization and reduced quality of life.",
+        "epidemiology": "Increasing prevalence among aging populations with significant morbidity.",
         "clinical_diagnostic_correlations": [
             "Dyspnea on exertion",
             "Fatigue",
             "Peripheral edema",
             "Orthopnea",
             "Paroxysmal nocturnal dyspnea",
-            "Elevated BNP/NT-proBNP"
+            "Elevated BNP or NT-proBNP"
         ],
         "recommendations": [
-            "Echocardiogram for structural assessment",
+            "Echocardiogram for structural and functional assessment",
             "ECG and chest X-ray",
-            "BNP or NT-proBNP testing",
-            "Medical management with ACE inhibitors/ARBs, beta-blockers, and diuretics",
+            "BNP/NT-proBNP measurement",
+            "Pharmacologic management (ACE inhibitors/ARBs, beta-blockers, diuretics)",
             "Aldosterone antagonists and digoxin in select cases",
-            "SGLT2 inhibitors as emerging therapy",
-            "Consider cardiac MRI for detailed tissue characterization"
+            "SGLT2 inhibitors",
+            "Cardiac MRI for detailed tissue characterization"
         ],
-        "recent_research": "Recent trials support the use of SGLT2 inhibitors in heart failure patients irrespective of diabetes status.",
-        "ml_insights": "Predictive analytics using multi-modal imaging data are being integrated to forecast heart failure progression."
+        "recent_research": "Recent clinical trials support SGLT2 inhibitors in heart failure irrespective of diabetic status.",
+        "ml_insights": "Predictive analytics using multi-modal imaging data now forecast heart failure progression."
     },
     "Arrhythmia": {
         "Atrial Fibrillation (AF)": {
@@ -102,26 +102,26 @@ cardiology_differentials = {
                 "Obesity",
                 "Sleep apnea"
             ],
-            "epidemiology": "The most common sustained arrhythmia with significant stroke risk.",
+            "epidemiology": "The most common sustained arrhythmia; significant risk for stroke.",
             "clinical_diagnostic_correlations": [
                 "Palpitations",
                 "Shortness of breath",
                 "Fatigue",
                 "Dizziness",
                 "Chest discomfort",
-                "Increased risk of thromboembolism"
+                "Thromboembolic events"
             ],
             "recommendations": [
-                "Electrocardiogram (ECG)",
+                "ECG for initial detection",
                 "24-hour Holter monitoring",
                 "Event recorder monitoring",
-                "Anticoagulation therapy (warfarin or DOACs)",
-                "Rate control (beta-blockers, calcium channel blockers, digoxin)",
-                "Rhythm control strategies (antiarrhythmic drugs, cardioversion, catheter ablation)",
-                "Consider left atrial appendage closure for stroke prevention in selected patients"
+                "Anticoagulation therapy",
+                "Rate control with beta-blockers or calcium channel blockers",
+                "Rhythm control strategies (medications, cardioversion, ablation)",
+                "Consider left atrial appendage closure in selected patients"
             ],
-            "recent_research": "Novel wearable ECG devices and AI algorithms are improving AF detection in ambulatory settings.",
-            "ml_insights": "Recent studies demonstrate that AI can predict AF onset from subtle ECG variations not visible to the human eye."
+            "recent_research": "Emerging wearable ECG devices and AI algorithms are enhancing early AF detection.",
+            "ml_insights": "Recent studies show AI can predict the onset of AF from subtle ECG variations."
         }
     }
 }
