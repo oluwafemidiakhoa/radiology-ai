@@ -1,4 +1,7 @@
 # oncology_differentials.py
+# Advanced Oncology Differential Diagnosis Dictionary
+# This file outlines detailed imaging descriptors, risk factors, epidemiology, clinical correlations,
+# and recommendations for major cancers with the latest insights from recent literature.
 
 oncology_differentials = {
     "Breast Cancer": {
@@ -9,7 +12,7 @@ oncology_differentials = {
             "Nipple retraction",
             "Skin thickening",
             "Lymphadenopathy",
-            "Ductal irregularities"  // Added additional descriptor
+            "Ductal irregularities"  # Added for subtle presentations
         ],
         "risk_factors": [
             "Age",
@@ -19,9 +22,9 @@ oncology_differentials = {
             "Nulliparity or late first pregnancy",
             "Hormone replacement therapy",
             "Obesity",
-            "Alcohol consumption"  // New risk factor in some epidemiologic studies
+            "Alcohol consumption"
         ],
-        "epidemiology": "Most common cancer in women worldwide; increased incidence in high-risk groups",
+        "epidemiology": "Most common cancer in women worldwide; incidence is increasing in high-risk populations.",
         "clinical_diagnostic_correlations": [
             "Palpable breast mass",
             "Nipple discharge",
@@ -30,19 +33,21 @@ oncology_differentials = {
             "Breast pain"
         ],
         "recommendations": [
-            "Mammography",
+            "Mammography and digital breast tomosynthesis",
             "Breast ultrasound",
-            "MRI of the breast",
-            "Biopsy (core needle or excisional)",
-            "Sentinel lymph node biopsy",
-            "Surgical resection (lumpectomy or mastectomy)",
+            "MRI of the breast for high-risk screening",
+            "Image-guided core needle biopsy",
+            "Sentinel lymph node biopsy for staging",
+            "Surgical resection (lumpectomy/mastectomy)",
             "Radiation therapy",
             "Chemotherapy",
             "Hormone therapy",
             "Targeted therapy",
             "Immunotherapy",
-            "Molecular subtyping (e.g., HER2, ER, PR status)"  // Enhanced recommendation
-        ]
+            "Molecular subtyping (HER2, ER, PR testing)"
+        ],
+        "recent_research": "Emerging liquid biopsy techniques and AI-enhanced imaging are revolutionizing early detection and personalized treatment.",
+        "ml_insights": "Machine learning models now accurately predict tumor receptor status from imaging alone."
     },
     "Prostate Cancer": {
         "imaging_descriptors": [
@@ -50,7 +55,7 @@ oncology_differentials = {
             "Reduced diffusion on MRI",
             "Elevated choline/citrate ratio on MR spectroscopy",
             "Bone metastases",
-            "Heterogeneous signal intensity"  // Added for more detailed imaging description
+            "Heterogeneous signal intensity"
         ],
         "risk_factors": [
             "Age",
@@ -59,26 +64,28 @@ oncology_differentials = {
             "High-fat diet",
             "Obesity"
         ],
-        "epidemiology": "Most common cancer in men; incidence increases with age",
+        "epidemiology": "Most common cancer in men; risk increases significantly with age.",
         "clinical_diagnostic_correlations": [
-            "Elevated PSA level",
+            "Elevated PSA",
             "Urinary symptoms (frequency, urgency, nocturia)",
-            "Bone pain (if metastatic)",
+            "Bone pain (in metastatic cases)",
             "Erectile dysfunction"
         ],
         "recommendations": [
-            "Prostate-specific antigen (PSA) testing",
+            "PSA testing",
             "Digital rectal exam (DRE)",
             "Transrectal ultrasound (TRUS) with biopsy",
             "MRI of the prostate",
-            "Gleason scoring",
-            "Active surveillance",
+            "Gleason scoring for risk stratification",
+            "Active surveillance for low-risk disease",
             "Radical prostatectomy",
             "Radiation therapy",
             "Hormone therapy",
             "Chemotherapy",
-            "Molecular profiling"  // Added for precision medicine approaches
-        ]
+            "Molecular profiling for targeted treatment"
+        ],
+        "recent_research": "Advances in multiparametric MRI and genomic classifiers are refining risk stratification.",
+        "ml_insights": "Deep learning algorithms can now segment prostate lesions with high precision, aiding in biopsy targeting."
     },
     "Colorectal Cancer": {
         "imaging_descriptors": [
@@ -88,7 +95,7 @@ oncology_differentials = {
             "Lymph node metastases",
             "Liver metastases",
             "Peritoneal implants",
-            "Mucosal irregularities"  // New descriptor
+            "Mucosal irregularities"  # Added descriptor for early malignant changes
         ],
         "risk_factors": [
             "Age",
@@ -99,26 +106,28 @@ oncology_differentials = {
             "Obesity",
             "Alcohol consumption"
         ],
-        "epidemiology": "Third most common cancer worldwide; screening programs reduce mortality",
+        "epidemiology": "Third most common cancer worldwide; screening programs have significantly reduced mortality.",
         "clinical_diagnostic_correlations": [
-            "Change in bowel habits",
+            "Altered bowel habits",
             "Rectal bleeding",
             "Abdominal pain",
             "Weight loss",
             "Iron deficiency anemia"
         ],
         "recommendations": [
-            "Colonoscopy",
+            "Colonoscopy as the gold standard",
             "Flexible sigmoidoscopy",
             "Fecal occult blood test (FOBT)",
             "Fecal immunochemical test (FIT)",
-            "CT colonography (virtual colonoscopy)",
-            "Biopsy",
+            "CT colonography",
+            "Biopsy for histopathological confirmation",
             "Surgical resection",
             "Chemotherapy",
             "Radiation therapy",
             "Targeted therapy",
             "Immunotherapy"
-        ]
+        ],
+        "recent_research": "AI-driven colonoscopy is emerging to improve adenoma detection rates.",
+        "ml_insights": "Advanced algorithms now assist in detecting subtle mucosal changes that may indicate early neoplasia."
     }
 }

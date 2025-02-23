@@ -3,8 +3,8 @@
 Evidence-based Clinical Guidelines for Medical Imaging
 
 This module provides concise summaries of key clinical guidelines from ACR, ESC, and NCCN.
-These summaries are intended for integration into AI diagnostic systems to support evidence-based decision making.
-Note: Always refer to the latest published guidelines for clinical practice.
+These guidelines support evidence-based decision making in AI diagnostic systems.
+Always refer to the latest published guidelines for clinical practice.
 """
 
 evidence_based_guidelines = {
@@ -41,7 +41,7 @@ evidence_based_guidelines = {
                 "Anticoagulation (LMWH, unfractionated heparin, DOACs)",
                 "Thrombolysis (in severe cases)",
                 "Embolectomy (rarely used)",
-                "IVC filter (for contraindications to anticoagulation)"
+                "IVC filter (for contraindications)"
             ],
             "Prognosis": [
                 "Pulmonary Embolism Severity Index (PESI)",
