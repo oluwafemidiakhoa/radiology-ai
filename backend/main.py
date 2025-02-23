@@ -148,7 +148,7 @@ Patient Context:
 {generate_clinical_context(age, sex)}"""
 
         response = await client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4o",
             messages=[{
                 "role": "system",
                 "content": system_prompt
