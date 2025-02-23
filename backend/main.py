@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 import numpy as np
 import pydicom
 from PIL import Image, UnidentifiedImageError
-import httpx  # For asynchronous HTTP requests to PubMed
+import httpx  # Using httpx for HTTP calls
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +27,7 @@ try:
 except ImportError as e:
     logging.error(f"Error importing config: {e}")
     OPENAI_API_KEY = None
-    exit()  # Critical error; stop execution if config is missing.
+    exit()  # Stop execution if the config is not working.
 
 # Import differentials and evidence-based guidelines
 from differentials import medical_differentials, evidence_based_guidelines
@@ -115,7 +115,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 logger.error(f"Standard image processing error: {e}")
                 raise HTTPException(500, "Image processing failed")
         if min(image.size) < MIN_RESOLUTION:
-            logger.warning(f"Low resolution {image.size}; resizing to {MIN_RESOLUTION}x{MIN_RESOLUTION}.")
+            logger.warning(f"Low resolution {image.size}; resizing to maintain minimum {MIN_RESOLUTION}x{MIN_RESOLUTION}.")
             w, h = image.size
             if w < h:
                 new_w = MIN_RESOLUTION
@@ -141,12 +141,11 @@ def select_differentials(analysis: str):
         selected.append("Pulmonary")
     if "scoliosis" in lower_text:
         selected.append("Musculoskeletal")
-    # Extend with additional rules as needed
     return selected
 
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
-    Reformats the AI analysis text by removing extra spaces and standardizing headings.
+    Reformats the AI analysis text by standardizing headings and bullet points.
     Emphasizes plain language and evidence-based conclusions.
     """
     lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
@@ -156,7 +155,7 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     return formatted
 
 def incorporate_differentials(analysis_text: str, categories: list) -> str:
-    """Appends differential diagnosis details from the medical_differentials dictionary."""
+    """Appends additional differential diagnosis details from the medical_differentials dictionary."""
     add_info = []
     for cat in categories:
         try:
@@ -195,7 +194,7 @@ def incorporate_guidelines(analysis_text: str, guidelines: dict) -> str:
 
 def extract_pubmed_query(analysis_text: str) -> str:
     """
-    Extracts a focused PubMed query based on key findings in the analysis text.
+    Extracts a focused PubMed query based on key terms in the analysis text.
     """
     lower_text = analysis_text.lower()
     if "pacemaker" in lower_text:
@@ -207,10 +206,10 @@ def extract_pubmed_query(analysis_text: str) -> str:
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
-    """Synchronous function to query PubMed and return a list of formatted article references."""
+    """Queries PubMed for articles related to the query and returns a list of formatted references using httpx."""
     pubmed_api = os.getenv("PUB_MED_API")
     if not pubmed_api:
-        logger.warning("PUB_MED_API is not set. Skipping PubMed references.")
+        logger.warning("PUB_MED_API not set. Skipping PubMed references.")
         return ["No PubMed API key provided."]
     
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -224,7 +223,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
         "api_key": pubmed_api
     }
     try:
-        search_resp = requests.get(esearch_url, params=params)
+        search_resp = httpx.get(esearch_url, params=params)
         if search_resp.status_code != 200:
             logger.error(f"PubMed search failed with status: {search_resp.status_code}")
             return ["PubMed search failed."]
@@ -239,7 +238,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
             "retmode": "json",
             "api_key": pubmed_api
         }
-        summary_resp = requests.get(esummary_url, params=params)
+        summary_resp = httpx.get(esummary_url, params=params)
         if summary_resp.status_code != 200:
             logger.error(f"PubMed summary retrieval failed with status: {summary_resp.status_code}")
             return ["PubMed summary retrieval failed."]
@@ -259,7 +258,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> list:
         return [f"Error retrieving PubMed references: {str(e)}"]
 
 async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
-    """Asynchronous wrapper for fetching PubMed references."""
+    """Asynchronous wrapper to fetch PubMed references."""
     references = await asyncio.to_thread(fetch_pubmed_articles_sync, query, max_results)
     if references:
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {ref}" for ref in references)
@@ -288,10 +287,10 @@ async def analyze_image(
 
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Build advanced system prompt with clear plain language instructions
+        # Build the system prompt with plain language and evidence-based instructions
         system_prompt = (
             "You are a medical imaging AI assistant. Analyze the diagnostic image and generate a clear, evidence-based report in plain language. "
-            "Structure your response with the following headings (use Markdown):\n\n"
+            "Structure your response using Markdown with the following sections:\n\n"
             "## Image Characteristics (Certainty: in percentage)\n"
             "- Modality:\n"
             "- Quality:\n"
@@ -303,8 +302,7 @@ async def analyze_image(
             "- Common differentials:\n\n"
             "## Summary\n"
             "- Concise bullet-point overview of key findings.\n\n"
-            "Use simple, plain language. Incorporate patient demographics if available. "
-            "Avoid excessive technical jargon."
+            "Use simple language and incorporate patient demographics if available. Avoid excessive technical jargon."
         )
 
         messages = [
@@ -337,7 +335,7 @@ async def analyze_image(
         analysis = incorporate_differentials(analysis, detected_categories)
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines)
         
-        # Extract focused PubMed query and fetch references
+        # Extract a focused PubMed query and fetch references
         pubmed_query = extract_pubmed_query(analysis)
         pubmed_refs = await fetch_pubmed_references(pubmed_query, max_results=3)
         analysis += "\n\n" + pubmed_refs
