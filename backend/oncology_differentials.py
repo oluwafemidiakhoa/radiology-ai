@@ -12,7 +12,11 @@ oncology_differentials = {
             "Nipple retraction",
             "Skin thickening",
             "Lymphadenopathy",
+<<<<<<< HEAD
             "Ductal irregularities"  # Added for subtle presentations
+=======
+            "Ductal irregularities"  # Added additional descriptor
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         ],
         "risk_factors": [
             "Age",
@@ -22,9 +26,15 @@ oncology_differentials = {
             "Nulliparity or late first pregnancy",
             "Hormone replacement therapy",
             "Obesity",
+<<<<<<< HEAD
             "Alcohol consumption"
         ],
         "epidemiology": "Most common cancer in women worldwide; incidence is increasing in high-risk populations.",
+=======
+            "Alcohol consumption"  # New risk factor in some studies
+        ],
+        "epidemiology": "Most common cancer in women worldwide; increased incidence in high-risk populations.",
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         "clinical_diagnostic_correlations": [
             "Palpable breast mass",
             "Nipple discharge",
@@ -44,10 +54,15 @@ oncology_differentials = {
             "Hormone therapy",
             "Targeted therapy",
             "Immunotherapy",
+<<<<<<< HEAD
             "Molecular subtyping (HER2, ER, PR testing)"
         ],
         "recent_research": "Emerging liquid biopsy techniques and AI-enhanced imaging are revolutionizing early detection and personalized treatment.",
         "ml_insights": "Machine learning models now accurately predict tumor receptor status from imaging alone."
+=======
+            "Molecular subtyping (e.g., HER2, ER, PR status)"  # Enhanced recommendation
+        ]
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
     },
     "Prostate Cancer": {
         "imaging_descriptors": [
@@ -55,7 +70,11 @@ oncology_differentials = {
             "Reduced diffusion on MRI",
             "Elevated choline/citrate ratio on MR spectroscopy",
             "Bone metastases",
+<<<<<<< HEAD
             "Heterogeneous signal intensity"
+=======
+            "Heterogeneous signal intensity"  # Added advanced imaging descriptor
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         ],
         "risk_factors": [
             "Age",
@@ -64,7 +83,11 @@ oncology_differentials = {
             "High-fat diet",
             "Obesity"
         ],
+<<<<<<< HEAD
         "epidemiology": "Most common cancer in men; risk increases significantly with age.",
+=======
+        "epidemiology": "Most common cancer in men; incidence increases with age.",
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         "clinical_diagnostic_correlations": [
             "Elevated PSA",
             "Urinary symptoms (frequency, urgency, nocturia)",
@@ -82,10 +105,15 @@ oncology_differentials = {
             "Radiation therapy",
             "Hormone therapy",
             "Chemotherapy",
+<<<<<<< HEAD
             "Molecular profiling for targeted treatment"
         ],
         "recent_research": "Advances in multiparametric MRI and genomic classifiers are refining risk stratification.",
         "ml_insights": "Deep learning algorithms can now segment prostate lesions with high precision, aiding in biopsy targeting."
+=======
+            "Molecular profiling"  # For precision medicine approaches
+        ]
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
     },
     "Colorectal Cancer": {
         "imaging_descriptors": [
@@ -95,7 +123,11 @@ oncology_differentials = {
             "Lymph node metastases",
             "Liver metastases",
             "Peritoneal implants",
+<<<<<<< HEAD
             "Mucosal irregularities"  # Added descriptor for early malignant changes
+=======
+            "Mucosal irregularities"  # New descriptor
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         ],
         "risk_factors": [
             "Age",
@@ -106,7 +138,11 @@ oncology_differentials = {
             "Obesity",
             "Alcohol consumption"
         ],
+<<<<<<< HEAD
         "epidemiology": "Third most common cancer worldwide; screening programs have significantly reduced mortality.",
+=======
+        "epidemiology": "Third most common cancer worldwide; effective screening reduces mortality.",
+>>>>>>> fdb8a77d1c25ad26320d8cd34c99ed2dca317300
         "clinical_diagnostic_correlations": [
             "Altered bowel habits",
             "Rectal bleeding",
