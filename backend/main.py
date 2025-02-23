@@ -2,6 +2,7 @@ import os
 import io
 import base64
 import logging
+from datetime import datetime
 from typing import Tuple, Optional
 import numpy as np
 import pydicom
@@ -11,26 +12,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
 
-# Security and Compliance
+# Configuration and Security
 try:
     from config import OPENAI_API_KEY
 except ImportError:
     logging.error("Missing required security configuration")
     exit()
 
-# Medical Knowledge Base
-from differentials import medical_differentials, evidence_based_guidelines
+# Medical Knowledge Integration
+try:
+    from differentials import medical_differentials, evidence_based_guidelines
+except ImportError:
+    logging.error("Medical knowledge base missing")
+    exit()
 
 # Configure Advanced Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler("medical_ai_audit.log"),
+        logging.FileHandler("medical_ai.log"),
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("MedImagingAIPro")
+logger = logging.getLogger("ClinicalImagingAI")
 
 # Initialize Secure OpenAI Client
 client = AsyncOpenAI(
@@ -39,157 +44,128 @@ client = AsyncOpenAI(
     max_retries=3
 )
 
+# FastAPI Application Setup
 app = FastAPI(
-    title="Clinical Imaging Analyzer Pro",
-    description="HIPAA-Compliant Diagnostic AI System",
+    title="Clinical Imaging AI",
+    description="HIPAA-Compliant Diagnostic Imaging Analysis System",
     version="3.2.1",
-    docs_url="/clinical-docs",
-    redoc_url=None
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST"],
+    allow_methods=["POST", "GET"],
     allow_headers=["*"]
 )
 
-# Clinical Constants
+# Constants
 MIN_RESOLUTION = 1024
 ACR_DISCLAIMER = "\n\n*ACR-Validated AI Analysis - Requires Radiologist Verification*"
 
+@app.get("/", include_in_schema=False)
+async def health_check():
+    """System Health Endpoint"""
+    return {
+        "status": "operational",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": app.version
+    }
+
 def secure_image_encode(image: Image.Image) -> str:
-    """Medical-grade image encoding with encryption"""
+    """Medical-grade image encoding"""
     buffered = io.BytesIO()
-    image.save(buffered, format="JPEG", quality=95, subsampling=0)
-    encrypted = base64.urlsafe_b64encode(buffered.getvalue())
-    return f"data:image/jpeg;base64,{encrypted.decode('utf-8')}"
+    image.save(buffered, format="JPEG", quality=95)
+    return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode('utf-8')}"
 
 def validate_dicom_metadata(dicom: pydicom.Dataset) -> None:
     """ACR-compliant DICOM validation"""
-    required_tags = {
-        "Modality": str,
-        "BodyPartExamined": str,
-        "PatientID": str,
-        "StudyDate": str
-    }
-    
-    missing = [tag for tag, _ in required_tags.items() if tag not in dicom]
+    required_tags = ["Modality", "BodyPartExamined", "PatientID", "StudyDate"]
+    missing = [tag for tag in required_tags if tag not in dicom]
     if missing:
-        logger.error(f"Invalid DICOM: Missing {missing}")
-        raise HTTPException(400, "Non-compliant DICOM metadata")
+        logger.error(f"Invalid DICOM metadata: Missing {missing}")
+        raise HTTPException(400, "Non-compliant DICOM headers")
 
 async def process_medical_image(data: bytes, filename: str) -> Tuple[Image.Image, str]:
-    """Clinical-grade image processing pipeline"""
+    """Clinical imaging pipeline"""
     try:
         if filename.endswith(".dcm"):
-            try:
-                dicom = pydicom.dcmread(io.BytesIO(data))
-                validate_dicom_metadata(dicom)
-                
-                # Advanced DICOM processing
-                if "WindowCenter" in dicom:
-                    pixel_array = pydicom.pixel_data_handlers.apply_windowing(
-                        dicom.pixel_array, dicom
-                    )
-                else:
-                    pixel_array = dicom.pixel_array
-                
-                image = Image.fromarray(pixel_array)
-                
-            except Exception as e:
-                logger.error(f"DICOM Error: {str(e)}")
-                raise HTTPException(422, "DICOM Processing Failed")
+            dicom = pydicom.dcmread(io.BytesIO(data))
+            validate_dicom_metadata(dicom)
+            pixel_array = pydicom.pixel_data_handlers.apply_windowing(
+                dicom.pixel_array, dicom
+            ) if "WindowCenter" in dicom else dicom.pixel_array
+            image = Image.fromarray(pixel_array)
         else:
-            try:
-                image = Image.open(io.BytesIO(data))
-                if image.mode not in ["RGB", "L"]:
-                    image = image.convert("L")
-            except UnidentifiedImageError:
-                raise HTTPException(415, "Unsupported Image Format")
+            image = Image.open(io.BytesIO(data))
+            if image.mode not in ["RGB", "L"]:
+                image = image.convert("L")
 
         # High-fidelity resizing
         if min(image.size) < MIN_RESOLUTION:
-            w, h = image.size
-            scale = MAX(MIN_RESOLUTION/w, MIN_RESOLUTION/h)
-            image = image.resize((int(w*scale), int(h*scale)), Image.Resampling.LANCZOS)
+            scale = max(MIN_RESOLUTION / image.width, MIN_RESOLUTION / image.height)
+            new_size = (int(image.width * scale), int(image.height * scale))
+            image = image.resize(new_size, Image.Resampling.LANCZOS)
 
         return image, secure_image_encode(image)
 
-    except HTTPException as e:
-        raise e
+    except UnidentifiedImageError:
+        raise HTTPException(415, "Unsupported image format")
     except Exception as e:
-        logger.critical(f"Imaging Failure: {str(e)}")
-        raise HTTPException(500, "Advanced Image Processing Error")
+        logger.error(f"Image processing error: {str(e)}")
+        raise HTTPException(500, "Medical image processing failure")
 
 def generate_clinical_context(age: Optional[int], sex: Optional[str]) -> str:
     """Structured patient context"""
     context = []
     if age: context.append(f"Age: {age}y")
     if sex: context.append(f"Sex: {sex}")
-    return "\n".join(context) if context else "No Demographic Data"
+    return "\n".join(context) if context else "No demographic data"
 
 @app.post("/analyze-image/")
-async def clinical_analysis(
+async def analyze_image(
     file: UploadFile = File(...),
     age: Optional[int] = Query(None, gt=0, le=120),
     sex: Optional[str] = Query(None, regex="^(Male|Female|Other)$")
 ) -> JSONResponse:
-    """ACR-Compliant Diagnostic Imaging Analysis"""
+    """ACR-Compliant Imaging Analysis"""
     try:
-        # Secure image processing
+        # Process image
         raw_data = await file.read()
         filename = file.filename.lower()
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Medical AI Analysis Protocol
-        system_prompt = f"""**Clinical Imaging Analyst Protocol v3.2**
-1. Anatomical Pattern Recognition
-   - Identify normal/abnormal structures
-   - Localize pathological features
-   
-2. Quantitative Biomarker Analysis
-   - Calculate cardiac/thoracic ratio
-   - Assess lung field translucency
-   
-3. Clinical Correlation Matrix
-   - ICD-11 code suggestions
-   - NCCN guideline recommendations
+        # Medical AI Protocol
+        system_prompt = f"""**Clinical Imaging Protocol v3.2**
+1. Anatomical Analysis
+2. Pathological Detection
+3. Quantitative Biomarkers
+4. Clinical Recommendations
 
 Patient Context:
 {generate_clinical_context(age, sex)}"""
 
-        messages = [{
-            "role": "system",
-            "content": system_prompt
-        }, {
-            "role": "user",
-            "content": [{
-                "type": "text",
-                "text": "Full diagnostic analysis with ACR compliance"
-            }, {
-                "type": "image_url",
-                "image_url": {
-                    "url": data_url,
-                    "detail": "high"
-                }
-            }]
-        }]
-
-        # Secure API Call
         response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
+            model="gpt-4-vision-preview",
+            messages=[{
+                "role": "system",
+                "content": system_prompt
+            }, {
+                "role": "user",
+                "content": [{
+                    "type": "image_url",
+                    "image_url": {"url": data_url, "detail": "high"}
+                }]
+            }],
             temperature=0.1,
-            max_tokens=3000,
-            frequency_penalty=0.5
+            max_tokens=3000
         )
 
-        # Process Clinical Report
+        # Process and format report
         analysis = response.choices[0].message.content
         formatted_report = format_clinical_report(analysis)
-        
-        # Generate Differential Matrix
         conditions = detect_clinical_conditions(formatted_report)
         final_report = integrate_medical_guidelines(formatted_report, conditions)
 
@@ -205,42 +181,44 @@ Patient Context:
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error(f"Analysis Failure: {str(e)}")
-        raise HTTPException(500, "Clinical Analysis System Error")
+        logger.error(f"Analysis failed: {str(e)}")
+        raise HTTPException(500, "Diagnostic service unavailable")
 
 def format_clinical_report(text: str) -> str:
-    """Structure medical report with ACR standards"""
+    """Structure medical report"""
     sections = [
         "## Technical Evaluation",
         "## Anatomical Findings",
         "## Clinical Correlation",
         "## Recommended Actions"
     ]
+    content_blocks = text.split("\n\n")
     return "\n\n".join(
         f"{section}\n{content}" 
-        for section, content in zip(sections, text.split("\n\n"))
+        for section, content in zip(sections, content_blocks)
     ) + ACR_DISCLAIMER
 
 def detect_clinical_conditions(report: str) -> list:
-    """Advanced condition detection"""
+    """Clinical condition detection"""
     keywords = {
-        "pneumonia": ["consolidation", "infiltrate", "airspace"],
-        "fracture": ["fracture", "break", "cortical disruption"],
+        "pneumonia": ["consolidation", "infiltrate"],
+        "fracture": ["fracture", "cortical disruption"],
         "cardiomegaly": ["ctr", "cardiac enlargement"]
     }
     return [
         condition 
-        for condition, terms in keywords.items()
+        for condition, terms in keywords.items() 
         if any(term in report.lower() for term in terms)
     ]
 
 def integrate_medical_guidelines(report: str, conditions: list) -> str:
-    """Evidence-based guideline integration"""
+    """Evidence-based integration"""
     for condition in conditions:
         if condition in medical_differentials:
             report += f"\n\n**{condition.upper()} GUIDELINES:**\n"
             report += "\n".join(f"- {rec}" for rec in medical_differentials[condition])
     return report
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
