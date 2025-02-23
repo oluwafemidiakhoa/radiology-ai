@@ -2,8 +2,8 @@
 """
 Consolidated Differential Diagnosis Dictionary for Medical Imaging
 
-This module imports and merges the advanced differential diagnosis dictionaries from Radiology,
-Oncology, and Cardiology into a single comprehensive resource.
+This module imports and merges the advanced differential diagnosis dictionaries from Radiology, Oncology, and Cardiology.
+It provides a comprehensive resource for AI diagnostic systems.
 """
 
 try:
@@ -21,7 +21,6 @@ try:
 except ImportError:
     cardiology_differentials = {}
 
-# Merge the separate dictionaries into one comprehensive dictionary
 medical_differentials = {
     "Radiology": radiology_differentials,
     "Oncology": oncology_differentials,
