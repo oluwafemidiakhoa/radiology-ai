@@ -22,10 +22,9 @@ function App() {
   };
 
   // Smooth scroll-to-top function
-  const scrollToTop = () =>
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // Use effect to update document class on darkMode change
+  // Update document class on darkMode change
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
@@ -35,9 +34,7 @@ function App() {
       {/* Responsive Sticky Navigation Bar */}
       <nav className="sticky top-0 z-50 bg-blue-600 dark:bg-gray-800 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="text-white font-bold text-xl">
-            Medical Images AI
-          </div>
+          <div className="text-white font-bold text-xl">Medical Images AI</div>
           <div className="flex space-x-6">
             <a
               href="#upload"
@@ -83,6 +80,16 @@ function App() {
           <p className="mt-2 text-lg md:text-xl font-medium">
             Harness AI to assist in medical imaging analysis
           </p>
+
+          {/* Hero Image */}
+          <div className="mt-6 flex justify-center">
+            <img
+              src={`${process.env.PUBLIC_URL}/assets/radvisionai-hero.jpg`}
+              alt="RadVisionAI Chest-Circuit"
+              className="w-full max-w-xl rounded shadow-lg"
+            />
+          </div>
+
           <a
             href="#upload"
             className="inline-block mt-6 px-8 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:shadow-lg hover:bg-blue-50 hover:scale-105 transform transition-all"
@@ -98,7 +105,7 @@ function App() {
           How It Works
         </h2>
         <p className="text-center text-gray-700 dark:text-gray-300">
-          Our innovative platform lets you upload a medical image, which is then analyzed by advanced AI algorithms. 
+          Our innovative platform lets you upload a medical image, which is then analyzed by advanced AI algorithms.
           The system generates an evidence-based diagnostic report enriched with real-time PubMed references and clinical guidelines.
         </p>
       </section>
@@ -133,7 +140,7 @@ function App() {
           Advanced Features & Innovation
         </h2>
         <p className="text-center text-gray-700 dark:text-gray-300">
-          Our platform leverages cutting-edge AI technology to generate comprehensive, evidence-based diagnostic reports. 
+          Our platform leverages cutting-edge AI technology to generate comprehensive, evidence-based diagnostic reports.
           Real-time integration with PubMed ensures that our findings are backed by the latest research. Explore dynamic analysis, differential diagnosis integration, and seamless report downloads.
         </p>
       </section>

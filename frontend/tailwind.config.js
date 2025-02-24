@@ -7,9 +7,11 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Load Tailwind's default color palette (which includes the new color names)
       colors: {
-        // Import and extend Tailwind's default color palette
         ...require('tailwindcss/colors'),
+
+        // Your custom color objects
         diagnostic: {
           blue: {
             50:  '#ebf5ff',

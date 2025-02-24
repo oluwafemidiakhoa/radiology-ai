@@ -10,3 +10,15 @@ frontend/.env
 *.js text eol=lf
 *.css text eol=lf
 *.json text eol=lf
+
+
+echo "
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore build files
+build/
+node_modules/
+" >> .gitignore
