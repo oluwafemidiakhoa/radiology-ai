@@ -21,7 +21,6 @@ Usage:
 from dataclasses import dataclass, asdict, field
 from typing import List, Dict
 
-
 @dataclass
 class OncologyDifferential:
     imaging_descriptors: List[str] = field(default_factory=list)
@@ -33,15 +32,11 @@ class OncologyDifferential:
     ml_insights: str = ""
 
     def to_dict(self) -> Dict:
-        """
-        Convert the oncology differential entry into a dictionary.
-        """
+        """Convert the oncology differential entry into a dictionary."""
         return asdict(self)
 
     def formatted_summary(self) -> str:
-        """
-        Returns a formatted multi-line string summarizing the key aspects of the differential diagnosis.
-        """
+        """Returns a formatted multi-line summary of the differential diagnosis."""
         return (
             f"Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors) + "\n\n"
             f"Risk Factors:\n  - " + "\n  - ".join(self.risk_factors) + "\n\n"
@@ -52,9 +47,8 @@ class OncologyDifferential:
             f"ML Insights:\n  {self.ml_insights}\n"
         )
 
-
-# Define the oncology differentials using the dataclass structure
-_oncology_differentials: Dict[str, OncologyDifferential] = {
+# Define the oncology differentials using the dataclass structure.
+oncology_differentials: Dict[str, OncologyDifferential] = {
     "Breast Cancer": OncologyDifferential(
         imaging_descriptors=[
             "Mass with spiculated margins",
@@ -186,7 +180,6 @@ _oncology_differentials: Dict[str, OncologyDifferential] = {
     ),
 }
 
-
 def get_oncology_differential(cancer_type: str) -> OncologyDifferential:
     """
     Retrieve the oncology differential for a given cancer type.
@@ -201,10 +194,9 @@ def get_oncology_differential(cancer_type: str) -> OncologyDifferential:
         KeyError: If the specified cancer type is not available.
     """
     try:
-        return _oncology_differentials[cancer_type]
+        return oncology_differentials[cancer_type]
     except KeyError as e:
         raise KeyError(f"No oncology differential found for '{cancer_type}'.") from e
-
 
 def list_oncology_differentials() -> Dict[str, OncologyDifferential]:
     """
@@ -213,4 +205,4 @@ def list_oncology_differentials() -> Dict[str, OncologyDifferential]:
     Returns:
         Dict[str, OncologyDifferential]: A dictionary mapping cancer types to their differential data.
     """
-    return _oncology_differentials.copy()
+    return oncology_differentials.copy()
