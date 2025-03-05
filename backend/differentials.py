@@ -1,33 +1,43 @@
-# differentials.py
 """
-Consolidated Differential Diagnosis Dictionary for Medical Imaging
+Consolidated Differential Diagnosis and Guidelines for Medical Imaging
 
-This module imports and merges the advanced differential diagnosis dictionaries from Radiology,
-Oncology, and Cardiology, along with evidence-based guidelines, into a single comprehensive resource.
+This module consolidates the advanced differential diagnosis dictionaries from Radiology,
+Oncology, and Cardiology, along with evidence-based guidelines, into a single comprehensive
+resource for use in AI diagnostic systems. The merged dictionary enables unified access to
+diagnostic criteria and guidelines.
 """
 
-try:
-    from radiology_differentials import radiology_differentials
-except ImportError:
-    radiology_differentials = {}
+import logging
+from typing import Any, Dict
 
-try:
-    from oncology_differentials import oncology_differentials
-except ImportError:
-    oncology_differentials = {}
+logger = logging.getLogger(__name__)
 
-try:
-    from cardiology_differentials import cardiology_differentials
-except ImportError:
-    cardiology_differentials = {}
+def safe_import(module_name: str, attribute: str) -> Any:
+    """
+    Safely import an attribute from a module. If the import fails, log the error and return an empty dict.
+    
+    Args:
+        module_name (str): The name of the module to import.
+        attribute (str): The attribute to retrieve from the module.
+    
+    Returns:
+        Any: The imported attribute or an empty dict if the import fails.
+    """
+    try:
+        module = __import__(module_name, fromlist=[attribute])
+        return getattr(module, attribute)
+    except ImportError as e:
+        logger.error(f"Error importing {attribute} from {module_name}: {e}")
+        return {}
 
-try:
-    from evidence_based_guidelines import evidence_based_guidelines
-except ImportError:
-    evidence_based_guidelines = {}
+radiology_differentials = safe_import("radiology_differentials", "radiology_differentials")
+oncology_differentials = safe_import("oncology_differentials", "oncology_differentials")
+cardiology_differentials = safe_import("cardiology_differentials", "cardiology_differentials")
+evidence_based_guidelines = safe_import("evidence_based_guidelines", "evidence_based_guidelines")
 
-medical_differentials = {
+medical_differentials: Dict[str, Any] = {
     "Radiology": radiology_differentials,
     "Oncology": oncology_differentials,
     "Cardiology": cardiology_differentials,
+    "Guidelines": evidence_based_guidelines,
 }
