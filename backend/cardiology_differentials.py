@@ -52,8 +52,8 @@ class CardiologyDifferential:
             f"ML Insights:\n  {self.ml_insights}\n"
         )
 
-# The dictionary supports both top-level and nested conditions.
-_cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]] = {
+# Define the cardiology differentials (top-level and nested) in a dictionary
+cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]] = {
     "Myocardial Infarction (MI)": CardiologyDifferential(
         imaging_descriptors=[
             "Regional wall motion abnormality",
@@ -177,7 +177,6 @@ _cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, Car
     }
 }
 
-
 def get_cardiology_differential(condition: str, subcondition: Optional[str] = None) -> CardiologyDifferential:
     """
     Retrieve the cardiology differential for a given condition.
@@ -193,19 +192,18 @@ def get_cardiology_differential(condition: str, subcondition: Optional[str] = No
         KeyError: If the specified condition or subcondition is not available.
     """
     if subcondition is None:
-        differential = _cardiology_differentials.get(condition)
+        differential = cardiology_differentials.get(condition)
         if differential is None or not isinstance(differential, CardiologyDifferential):
             raise KeyError(f"No cardiology differential found for '{condition}'.")
         return differential
     else:
-        nested = _cardiology_differentials.get(condition)
+        nested = cardiology_differentials.get(condition)
         if nested is None or not isinstance(nested, dict):
             raise KeyError(f"No nested cardiology differential found for category '{condition}'.")
         differential = nested.get(subcondition)
         if differential is None:
             raise KeyError(f"No cardiology differential found for '{subcondition}' in category '{condition}'.")
         return differential
-
 
 def list_cardiology_differentials() -> Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]]:
     """
@@ -215,4 +213,5 @@ def list_cardiology_differentials() -> Dict[str, Union[CardiologyDifferential, D
         Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]]:
             A dictionary mapping condition names (or categories) to their differential data.
     """
-    return _cardiology_differentials.copy()
+    # Return a shallow copy to prevent accidental mutation.
+    return cardiology_differentials.copy()
