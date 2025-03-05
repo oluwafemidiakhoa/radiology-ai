@@ -20,12 +20,11 @@ import httpx
 from dotenv import load_dotenv
 load_dotenv()
 
-
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# MongoDB integration functions
+# MongoDB integration functions (synchronous)
 from models import store_report, get_report, list_reports
 
 # Load configuration and validate OpenAI API key
@@ -79,7 +78,6 @@ app.add_middleware(
 MIN_RESOLUTION: int = 512
 REQUIRED_DISCLAIMER: str = "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
 
-
 ############################################
 # Utility Functions
 ############################################
@@ -87,10 +85,10 @@ REQUIRED_DISCLAIMER: str = "\n\n*AI-generated analysis – Must be validated by 
 def encode_image_to_data_url(image: Image.Image) -> str:
     """
     Convert a PIL Image to a base64-encoded data URL.
-
+    
     Args:
         image: The PIL Image to encode.
-
+        
     Returns:
         A base64-encoded data URL string.
     """
@@ -103,10 +101,10 @@ def encode_image_to_data_url(image: Image.Image) -> str:
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """
     Validate that the DICOM dataset contains essential metadata tags.
-
+    
     Args:
         dicom_obj: The DICOM dataset.
-
+    
     Raises:
         HTTPException: If any required tag is missing.
     """
@@ -120,17 +118,17 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """
     Process the uploaded medical image ensuring minimum resolution.
-
+    
     Handles both DICOM and standard image files. If the image resolution is below the
     minimum threshold, it is resized while preserving the aspect ratio.
-
+    
     Args:
         raw_data: Raw image data in bytes.
         filename: Name of the uploaded file.
-
+    
     Returns:
         A tuple containing the processed PIL Image and its base64-encoded data URL.
-
+    
     Raises:
         HTTPException: If the image cannot be processed.
     """
@@ -168,10 +166,10 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
 def select_differentials(analysis: str) -> List[str]:
     """
     Select differential diagnosis categories based on keywords in the analysis text.
-
+    
     Args:
         analysis: AI-generated analysis text.
-
+    
     Returns:
         A list of selected differential categories.
     """
@@ -189,11 +187,11 @@ def select_differentials(analysis: str) -> List[str]:
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
     Standardize and reformat the AI analysis text, appending a disclaimer if needed.
-
+    
     Args:
         analysis_text: Raw AI analysis text.
         disclaimers: Whether to append the disclaimer.
-
+        
     Returns:
         Reformatted analysis text.
     """
@@ -207,28 +205,37 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
     """
     Append additional differential diagnosis details from the medical_differentials dictionary.
-
+    
     Args:
         analysis_text: Current analysis text.
         categories: List of selected differential categories.
-
+    
     Returns:
         Analysis text enriched with differential details.
     """
     extra_info = []
+    try:
+        radiology_diff = medical_differentials.get("Radiology", {})
+    except Exception as e:
+        logger.error(f"Error retrieving Radiology differentials: {e}")
+        radiology_diff = {}
+
     for cat in categories:
         try:
-            cat_data = medical_differentials["Radiology"][cat]
+            # Assume radiology_diff is a dictionary mapping condition names to details
+            cat_data = radiology_diff.get(cat, {})
             lines = [f"**Additional {cat} Differentials:**"]
-            for subcat, details in cat_data.items():
-                if isinstance(details, dict):
-                    desc = details.get("Description", "No description available.")
-                    lines.append(f"- **{subcat}**: {desc}")
-                else:
-                    lines.append(f"- {subcat}: {details}")
+            # If cat_data is a dictionary of sub-entries, iterate over them
+            if isinstance(cat_data, dict):
+                for subcat, details in cat_data.items():
+                    if isinstance(details, dict):
+                        desc = details.get("Description", "No description available.")
+                        lines.append(f"- **{subcat}**: {desc}")
+                    else:
+                        lines.append(f"- {subcat}: {details}")
             extra_info.append("\n".join(lines))
-        except KeyError:
-            logger.warning(f"No dictionary entry found for category '{cat}'.")
+        except Exception as e:
+            logger.warning(f"Error incorporating differentials for {cat}: {e}")
             continue
     if extra_info:
         return analysis_text + "\n\n" + "\n\n".join(extra_info)
@@ -238,11 +245,11 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
 def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any]) -> str:
     """
     Append a summary of evidence-based guidelines to the analysis text.
-
+    
     Args:
         analysis_text: Current analysis text.
         guidelines: Guidelines information.
-
+    
     Returns:
         Analysis text enriched with guideline summaries.
     """
@@ -265,10 +272,10 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any]) -> st
 def extract_pubmed_query(analysis_text: str) -> str:
     """
     Extract a focused PubMed query based on key terms in the analysis text.
-
+    
     Args:
         analysis_text: AI-generated analysis text.
-
+    
     Returns:
         A PubMed search query.
     """
@@ -287,11 +294,11 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> List[str]:
     Synchronously query PubMed for articles related to the provided query.
     
     Caches results to minimize redundant network calls.
-
+    
     Args:
         query: The search query.
         max_results: Maximum number of articles to retrieve.
-
+    
     Returns:
         A list of formatted reference strings.
     """
@@ -341,15 +348,14 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> List[str]:
     except Exception as e:
         return [f"Error retrieving PubMed references: {str(e)}"]
 
-
 async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
     """
     Asynchronously fetch PubMed references by wrapping the synchronous query function.
-
+    
     Args:
         query: The search query.
         max_results: Maximum number of articles to retrieve.
-
+    
     Returns:
         A formatted string containing PubMed references.
     """
@@ -371,19 +377,19 @@ async def analyze_image(
 ) -> Dict[str, Any]:
     """
     Analyze an uploaded medical image and return a detailed AI-generated report.
-
+    
     Processes DICOM and standard image files, generates an AI analysis using an OpenAI model,
     enriches the report with differential diagnoses and evidence-based guidelines, appends PubMed references,
     and stores the final report in MongoDB.
-
+    
     Args:
         file: The uploaded image file.
         age: Optional patient age.
         sex: Optional patient sex.
-
+    
     Returns:
         A JSON response containing the filename, image metadata, and AI analysis.
-
+    
     Raises:
         HTTPException: If processing or analysis fails.
     """
@@ -443,8 +449,8 @@ async def analyze_image(
         pubmed_refs = await fetch_pubmed_references(pubmed_query)
         analysis += "\n\n" + pubmed_refs
 
-        # Store report in MongoDB asynchronously
-        await store_report(filename, analysis)
+        # Store report in MongoDB asynchronously (wrap synchronous call)
+        await asyncio.to_thread(store_report, filename, analysis)
 
         image_meta = {
             "dimensions": image.size,
@@ -467,11 +473,11 @@ async def analyze_image(
 async def get_all_reports() -> Dict[str, Any]:
     """
     Retrieve all stored diagnostic reports from MongoDB.
-
+    
     Returns:
         A JSON response containing a list of reports.
     """
-    reports = await list_reports()
+    reports = await asyncio.to_thread(list_reports)
     return JSONResponse(content={"reports": reports})
 
 
@@ -479,17 +485,17 @@ async def get_all_reports() -> Dict[str, Any]:
 async def download_report(filename: str) -> Dict[str, Any]:
     """
     Download a specific diagnostic report from MongoDB by filename.
-
+    
     Args:
         filename: The report filename.
-
+    
     Returns:
         A JSON response containing the report details.
-
+    
     Raises:
         HTTPException: If the report is not found.
     """
-    report = await get_report(filename)
+    report = await asyncio.to_thread(get_report, filename)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found in database.")
     return JSONResponse(content=report)
