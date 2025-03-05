@@ -13,7 +13,6 @@ Helper functions allow retrieval of specific differentials or listing of all ava
 from dataclasses import dataclass, asdict, field
 from typing import List, Dict
 
-
 @dataclass
 class RadiologyDifferential:
     imaging_descriptors: List[str] = field(default_factory=list)
@@ -25,15 +24,11 @@ class RadiologyDifferential:
     ml_insights: str = ""
 
     def to_dict(self) -> Dict:
-        """
-        Convert the radiology differential entry into a dictionary.
-        """
+        """Convert the radiology differential entry into a dictionary."""
         return asdict(self)
 
     def formatted_summary(self) -> str:
-        """
-        Returns a formatted multi-line string summarizing the key aspects of the differential diagnosis.
-        """
+        """Return a formatted multi-line summary of the differential diagnosis."""
         return (
             f"Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors) + "\n\n"
             f"Risk Factors:\n  - " + "\n  - ".join(self.risk_factors) + "\n\n"
@@ -44,9 +39,8 @@ class RadiologyDifferential:
             f"ML Insights:\n  {self.ml_insights}\n"
         )
 
-
-# Define the radiology differentials organized by category
-_radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
+# Define the radiology differentials organized by category.
+radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
     "Pulmonary": {
         "Pneumonia": RadiologyDifferential(
             imaging_descriptors=[
@@ -341,7 +335,6 @@ _radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
     }
 }
 
-
 def get_radiology_differential(category: str, condition: str) -> RadiologyDifferential:
     """
     Retrieve the radiology differential for a given category and condition.
@@ -357,10 +350,9 @@ def get_radiology_differential(category: str, condition: str) -> RadiologyDiffer
         KeyError: If the category or condition is not available.
     """
     try:
-        return _radiology_differentials[category][condition]
+        return radiology_differentials[category][condition]
     except KeyError as e:
         raise KeyError(f"No radiology differential found for category '{category}' and condition '{condition}'.") from e
-
 
 def list_radiology_differentials() -> Dict[str, Dict[str, RadiologyDifferential]]:
     """
@@ -371,4 +363,4 @@ def list_radiology_differentials() -> Dict[str, Dict[str, RadiologyDifferential]
         to condition names and their corresponding differential data.
     """
     # Return a shallow copy to prevent accidental mutation.
-    return {cat: diff.copy() for cat, diff in _radiology_differentials.items()}
+    return {cat: diff.copy() for cat, diff in radiology_differentials.items()}
