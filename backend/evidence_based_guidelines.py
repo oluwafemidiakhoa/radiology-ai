@@ -1,4 +1,3 @@
-# evidence_based_guidelines.py
 """
 Evidence-based Clinical Guidelines for Medical Imaging
 
@@ -7,7 +6,10 @@ These guidelines support evidence-based decision making in AI diagnostic systems
 Always refer to the latest published guidelines for clinical practice.
 """
 
-evidence_based_guidelines = {
+from typing import Dict, Any
+
+# Define the guidelines using nested dictionaries.
+evidence_based_guidelines: Dict[str, Any] = {
     "ACR": {
         "LungRADS": {
             "Category 1": "No significant findings - routine follow-up",
@@ -85,3 +87,42 @@ evidence_based_guidelines = {
         }
     }
 }
+
+
+def get_guideline(organization: str, guideline_type: str) -> Any:
+    """
+    Retrieve the guideline data for a given organization and guideline type.
+
+    Args:
+        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN").
+        guideline_type (str): The specific guideline type (e.g., "LungRADS", "PE", "Breast Cancer").
+
+    Returns:
+        Any: The guideline data (either a dictionary or list) for the specified organization and type.
+
+    Raises:
+        KeyError: If the organization or guideline type is not found.
+    """
+    try:
+        return evidence_based_guidelines[organization][guideline_type]
+    except KeyError as e:
+        raise KeyError(f"Guideline not found for organization '{organization}' and type '{guideline_type}'.") from e
+
+
+def list_guidelines(organization: str) -> Dict[str, Any]:
+    """
+    List all guideline types for a given organization.
+
+    Args:
+        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN").
+
+    Returns:
+        Dict[str, Any]: A dictionary mapping each guideline type to its data.
+
+    Raises:
+        KeyError: If the organization is not found.
+    """
+    try:
+        return evidence_based_guidelines[organization]
+    except KeyError as e:
+        raise KeyError(f"No guidelines found for organization '{organization}'.") from e
