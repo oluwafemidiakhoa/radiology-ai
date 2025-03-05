@@ -1,42 +1,59 @@
 """
-Consolidated Differential Diagnosis and Guidelines for Medical Imaging
+Consolidated Differential Diagnosis Dictionary for Medical Imaging
 
-This module consolidates the advanced differential diagnosis dictionaries from Radiology,
-Oncology, and Cardiology, along with evidence-based guidelines, into a single comprehensive
-resource for use in AI diagnostic systems. The merged dictionary enables unified access to
-diagnostic criteria and guidelines.
+This module imports and merges the advanced differential diagnosis dictionaries
+from Radiology, Oncology, and Cardiology, along with evidence-based guidelines,
+into a single comprehensive resource. If a module or attribute is missing,
+it falls back to an empty dictionary, ensuring the application can still start.
 """
 
 import logging
-from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
-def safe_import(module_name: str, attribute: str) -> Any:
-    """
-    Safely import an attribute from a module. If the import fails, log the error and return an empty dict.
-    
-    Args:
-        module_name (str): The name of the module to import.
-        attribute (str): The attribute to retrieve from the module.
-    
-    Returns:
-        Any: The imported attribute or an empty dict if the import fails.
-    """
-    try:
-        module = __import__(module_name, fromlist=[attribute])
-        return getattr(module, attribute)
-    except ImportError as e:
-        logger.error(f"Error importing {attribute} from {module_name}: {e}")
-        return {}
+# Attempt to import the radiology differentials
+try:
+    from radiology_differentials import radiology_differentials as radio_diff
+except ImportError as e:
+    logger.error(f"Could not import 'radiology_differentials': {e}")
+    radio_diff = {}
+except AttributeError as e:
+    logger.error(f"'radiology_differentials' module does not define the expected attribute: {e}")
+    radio_diff = {}
 
-radiology_differentials = safe_import("radiology_differentials", "radiology_differentials")
-oncology_differentials = safe_import("oncology_differentials", "oncology_differentials")
-cardiology_differentials = safe_import("cardiology_differentials", "cardiology_differentials")
-evidence_based_guidelines = safe_import("evidence_based_guidelines", "evidence_based_guidelines")
+# Attempt to import the oncology differentials
+try:
+    from oncology_differentials import oncology_differentials
+except ImportError as e:
+    logger.error(f"Could not import 'oncology_differentials': {e}")
+    oncology_differentials = {}
+except AttributeError as e:
+    logger.error(f"'oncology_differentials' module does not define the expected attribute: {e}")
+    oncology_differentials = {}
 
-medical_differentials: Dict[str, Any] = {
-    "Radiology": radiology_differentials,
+# Attempt to import the cardiology differentials
+try:
+    from cardiology_differentials import cardiology_differentials
+except ImportError as e:
+    logger.error(f"Could not import 'cardiology_differentials': {e}")
+    cardiology_differentials = {}
+except AttributeError as e:
+    logger.error(f"'cardiology_differentials' module does not define the expected attribute: {e}")
+    cardiology_differentials = {}
+
+# Attempt to import the evidence-based guidelines
+try:
+    from evidence_based_guidelines import evidence_based_guidelines
+except ImportError as e:
+    logger.error(f"Could not import 'evidence_based_guidelines': {e}")
+    evidence_based_guidelines = {}
+except AttributeError as e:
+    logger.error(f"'evidence_based_guidelines' module does not define the expected attribute: {e}")
+    evidence_based_guidelines = {}
+
+# Consolidate all dictionaries into a single resource
+medical_differentials = {
+    "Radiology":  radiology_differentials,
     "Oncology": oncology_differentials,
     "Cardiology": cardiology_differentials,
     "Guidelines": evidence_based_guidelines,
