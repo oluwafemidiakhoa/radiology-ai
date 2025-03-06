@@ -1,8 +1,12 @@
 """
-Advanced Main API for Medical Imaging AI Analysis (Updated)
+main.py (Updated)
 
-This FastAPI backend processes medical images (DICOM and standard) using an AI model,
-integrates evidence-based guidelines with real-time PubMed references, and stores reports in MongoDB.
+Advanced FastAPI Backend for Medical Imaging AI Analysis:
+ - Processes DICOM and standard images
+ - Generates AI-based analysis (via OpenAI)
+ - Integrates relevant guidelines (radiology, oncology, cardiology)
+ - Fetches domain-specific PubMed references
+ - Stores results in MongoDB
 """
 
 import os
@@ -24,28 +28,23 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# MongoDB integration functions (synchronous).
-# Make sure these are defined properly in your models.py.
+# MongoDB integration (replace with your actual implementations).
 from models import store_report, get_report, list_reports
 
-# Load configuration and validate OpenAI API key
+# Load configuration containing OpenAI API key
 try:
     from config import OPENAI_API_KEY
-except ImportError as e:
-    logging.error(f"Error importing config: {e}")
+except ImportError:
+    logging.error("Could not import config. Check if config.py with OPENAI_API_KEY exists.")
     OPENAI_API_KEY = None
-    exit("Configuration missing. Exiting.")
 
 if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
-    logging.error("Invalid or missing OpenAI API key. Please check your configuration.")
-    exit("Invalid API key. Exiting.")
+    raise SystemExit("Invalid or missing OpenAI API key. Please update your configuration.")
 
-# Import dictionaries for differentials and guidelines
-# Ensure these are correctly defined in differentials.py
-from differentials import medical_differentials, evidence_based_guidelines
+# Import the updated guidelines dictionary & retrieval functions
+from evidence_based_guidelines import evidence_based_guidelines
 
-# PubMed fetching function (synchronous) from pubmed.py
-# You can also implement an async version, but here we wrap sync calls in threads for concurrency.
+# Import synchronous PubMed fetch function (or the async one if you prefer).
 from pubmed import fetch_pubmed_articles_sync
 
 # Configure logging
@@ -55,24 +54,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MedicalImagingAI")
 
-# Initialize asynchronous OpenAI client
-# Replace with your own method of using OpenAI if you prefer the standard `import openai`.
+# Attempt to initialize an asynchronous OpenAI client
 try:
     from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-except ImportError as e:
-    logger.error(f"Error initializing OpenAI: {e}")
-    client = None
+    openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+except ImportError:
+    # Fallback or raise an error
+    openai_client = None
+    logger.warning("OpenAI client not initialized. Please install the openai library.")
 
-# Initialize FastAPI application
+# Initialize FastAPI app
 app = FastAPI(
-    title="Medical Imaging AI with PubMed",
+    title="Multi-Domain Medical Imaging AI",
     description=(
-        "Advanced AI-based analysis of medical images, integrating evidence-based guidelines "
-        "and real-time PubMed references."
+        "AI-based analysis of medical images, integrating Radiology, "
+        "Oncology, and Cardiology guidelines, and relevant PubMed references."
     ),
-    version="1.1.0",
+    version="1.2.0",
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -81,81 +81,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Constants
-MIN_RESOLUTION: int = 512
-REQUIRED_DISCLAIMER: str = (
-    "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
-)
+MIN_RESOLUTION = 512
+REQUIRED_DISCLAIMER = "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
 
-############################################
+################################################################################
 # Utility Functions
-############################################
+################################################################################
 
 def encode_image_to_data_url(image: Image.Image) -> str:
-    """
-    Convert a PIL Image to a base64-encoded data URL.
-    
-    Args:
-        image: The PIL Image to encode.
-        
-    Returns:
-        A base64-encoded data URL string.
-    """
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG", quality=90)
-    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    """Convert a PIL Image to a base64-encoded data URL."""
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=90)
+    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{img_b64}"
 
-
-def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
-    """
-    Validate that the DICOM dataset contains essential metadata tags.
-    
-    Args:
-        dicom_obj: The DICOM dataset.
-    
-    Raises:
-        HTTPException: If any required tag is missing.
-    """
+def validate_dicom_metadata(dcm: pydicom.Dataset) -> None:
+    """Ensure critical DICOM tags are present."""
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
-    missing = [tag for tag in required_tags if tag not in dicom_obj]
+    missing = [t for t in required_tags if t not in dcm]
     if missing:
-        logger.error(f"Missing required DICOM tags: {missing}")
-        raise HTTPException(status_code=400, detail=f"Incomplete DICOM metadata: {', '.join(missing)}")
+        raise HTTPException(status_code=400, detail=f"Missing DICOM tags: {missing}")
 
-
-async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
+async def process_medical_image(raw: bytes, filename: str) -> Tuple[Image.Image, str]:
     """
-    Process the uploaded medical image ensuring minimum resolution.
-    
-    Handles both DICOM and standard image files. If the image resolution is below the
-    minimum threshold, it is resized while preserving the aspect ratio.
-    
-    Args:
-        raw_data: Raw image data in bytes.
-        filename: Name of the uploaded file.
-    
+    Load and process an uploaded DICOM or standard image, ensuring minimum resolution.
     Returns:
-        A tuple containing the processed PIL Image and its base64-encoded data URL.
-    
-    Raises:
-        HTTPException: If the image cannot be processed.
+        - PIL Image
+        - base64 data URL
     """
     try:
         if filename.endswith(".dcm"):
-            # Process DICOM
-            dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
-            validate_dicom_metadata(dicom_obj)
-            pixel_array = dicom_obj.pixel_array
-            norm_array = ((pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255).astype(np.uint8)
-            image = Image.fromarray(norm_array)
+            # Handle DICOM
+            dcm = pydicom.dcmread(io.BytesIO(raw))
+            validate_dicom_metadata(dcm)
+            pixels = dcm.pixel_array
+            # Normalize to 0-255 for display
+            norm = ((pixels - np.min(pixels)) / (np.ptp(pixels) or 1) * 255).astype(np.uint8)
+            image = Image.fromarray(norm)
         else:
-            # Process a standard image
-            image = Image.open(io.BytesIO(raw_data))
+            # Handle standard image
+            image = Image.open(io.BytesIO(raw))
             if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
 
-        # Resize if below minimum resolution
+        # Enforce minimum resolution
         if min(image.size) < MIN_RESOLUTION:
             w, h = image.size
             if w < h:
@@ -173,284 +142,340 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         logger.error(f"Error processing image: {e}")
         raise HTTPException(status_code=500, detail="Image processing failed.")
 
-
-def select_differentials(analysis: str) -> List[str]:
+def reformat_analysis(analysis_text: str) -> str:
     """
-    Select differential diagnosis categories based on keywords in the analysis text.
-    
-    Args:
-        analysis: AI-generated analysis text.
-    
-    Returns:
-        A list of selected differential categories.
+    Cleanup the AI-generated text and append disclaimers if not present.
     """
-    selected = []
-    text = analysis.lower()
-    if "pacemaker" in text:
-        selected.append("Cardiology")
-    if "consolidation" in text or "infiltrate" in text:
-        selected.append("Pulmonary")
-    if "scoliosis" in text:
-        selected.append("Musculoskeletal")
-    return selected
+    lines = [ln.strip() for ln in analysis_text.splitlines() if ln.strip()]
+    joined = "\n".join(lines)
+    if REQUIRED_DISCLAIMER not in joined:
+        joined += REQUIRED_DISCLAIMER
+    return joined
 
+################################################################################
+# Domain Detection and Guidelines Incorporation
+################################################################################
 
-def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
+def detect_domains(analysis_text: str) -> List[str]:
     """
-    Standardize and reformat the AI analysis text, appending a disclaimer if needed.
-    
-    Args:
-        analysis_text: Raw AI analysis text.
-        disclaimers: Whether to append the disclaimer.
-        
-    Returns:
-        Reformatted analysis text.
+    Simple keyword-based domain detection for Radiology, Oncology, and Cardiology
+    based on the AI analysis text.
     """
-    lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
-    formatted = "\n".join(lines)
-    if disclaimers and REQUIRED_DISCLAIMER not in formatted:
-        formatted += REQUIRED_DISCLAIMER
-    return formatted
+    text_lower = analysis_text.lower()
+    domains = []
 
+    # Radiology triggers
+    if any(term in text_lower for term in ["x-ray", "ct", "mri", "radiograph", "dicom", "lung nodule", "pneumonia"]):
+        domains.append("radiology")
+    # For example, if we see 'mammogram', we can consider that radiology + oncology.
+    if "mammogram" in text_lower or "breast" in text_lower:
+        if "radiology" not in domains:
+            domains.append("radiology")
+        if "oncology" not in domains:
+            domains.append("oncology")
 
-def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
+    # Cardiology triggers
+    if any(term in text_lower for term in ["cardiac", "heart", "acs", "pe", "hf", "pacemaker", "arrhythmia"]):
+        if "cardiology" not in domains:
+            domains.append("cardiology")
+
+    # Oncology triggers
+    if any(term in text_lower for term in ["cancer", "tumor", "carcinoma", "malignancy", "metastasis"]):
+        if "oncology" not in domains:
+            domains.append("oncology")
+
+    # If no domain found, default to "radiology" (since we are analyzing an image).
+    # Or you can return an empty list if you prefer.
+    if not domains:
+        domains.append("radiology")
+
+    return domains
+
+def incorporate_guidelines_by_domain(analysis_text: str, domains: List[str]) -> str:
     """
-    Append additional differential diagnosis details from the `medical_differentials` dictionary.
-    
-    Args:
-        analysis_text: Current analysis text.
-        categories: List of selected differential categories.
-    
-    Returns:
-        Analysis text enriched with differential details.
+    Append relevant guidelines from 'evidence_based_guidelines' based on
+    the recognized domains.
     """
-    extra_info = []
-    # Retrieve Radiology data from the dictionary
-    radiology_diff = medical_differentials.get("Radiology", {})
+    # We'll build a structured summary, then append it to the analysis_text
+    guidelines_sections = []
 
-    for cat in categories:
-        cat_data = radiology_diff.get(cat, {})
-        if not cat_data:
-            continue
-        lines = [f"**Additional {cat} Differentials:**"]
-        if isinstance(cat_data, dict):
-            # If cat_data is a dict of subcategories
-            for subcat, details in cat_data.items():
-                if isinstance(details, dict):
-                    desc = details.get("Description", "No description available.")
-                    lines.append(f"- **{subcat}**: {desc}")
-                else:
-                    lines.append(f"- {subcat}: {details}")
-        extra_info.append("\n".join(lines))
-    if extra_info:
-        return analysis_text + "\n\n" + "\n\n".join(extra_info)
-    return analysis_text
-
-
-def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any]) -> str:
-    """
-    Append a summary of evidence-based guidelines to the analysis text.
-    
-    Args:
-        analysis_text: Current analysis text.
-        guidelines: Guidelines information from `evidence_based_guidelines`.
-    
-    Returns:
-        Analysis text enriched with guideline summaries.
-    """
-    glines = []
-    for org, topics in guidelines.items():
-        glines.append(f"**{org} Guidelines Summary:**")
-        for topic, details in topics.items():
-            if isinstance(details, dict):
-                # Format dictionary details
-                points = ", ".join(f"{k}: {v}" for k, v in details.items())
-                glines.append(f"- {topic}: {points}")
-            elif isinstance(details, list):
-                # Format list details
-                glines.append(f"- {topic}: " + ", ".join(details))
+    # ACR references: "radiology" domain
+    if "radiology" in domains:
+        # Potential sub-guidelines from ACR
+        # If we see 'mammogram' or 'breast' => BIRADS
+        if any(x in analysis_text.lower() for x in ["mammogram", "breast"]):
+            if "ACR" in evidence_based_guidelines:
+                if "BI-RADS" in evidence_based_guidelines["ACR"]:
+                    birads_data = evidence_based_guidelines["ACR"]["BI-RADS"]
+                    # Format it
+                    lines = ["**ACR BI-RADS**:"]
+                    for category, desc in birads_data.items():
+                        lines.append(f"- {category}: {desc}")
+                    guidelines_sections.append("\n".join(lines))
+        else:
+            # Possibly incorporate general ACR guidelines (e.g., LungRADS or General_Radiology)
+            # if 'lung' in analysis_text, or else we just show "General_Radiology"
+            if "lung" in analysis_text.lower():
+                if "ACR" in evidence_based_guidelines and "LungRADS" in evidence_based_guidelines["ACR"]:
+                    lung_data = evidence_based_guidelines["ACR"]["LungRADS"]
+                    lines = ["**ACR LungRADS**:"]
+                    for cat, desc in lung_data.items():
+                        lines.append(f"- {cat}: {desc}")
+                    guidelines_sections.append("\n".join(lines))
             else:
-                # Simple string details
-                glines.append(f"- {topic}: {details}")
-    if glines:
-        return analysis_text + "\n\n" + "\n".join(glines)
-    return analysis_text
+                # If not breast or lung, show general radiology guidelines
+                if "ACR" in evidence_based_guidelines and "General_Radiology" in evidence_based_guidelines["ACR"]:
+                    gen_rad = evidence_based_guidelines["ACR"]["General_Radiology"]
+                    lines = ["**ACR General Radiology Guidelines**"]
+                    for key, val in gen_rad.items():
+                        lines.append(f"- {key}: {val}")
+                    guidelines_sections.append("\n".join(lines))
 
+    # Cardiology domain => ESC
+    if "cardiology" in domains:
+        if "ESC" in evidence_based_guidelines:
+            # Possibly detect sub-conditions like ACS, PE, Heart_Failure from text
+            sub_sections = []
+            text_lower = analysis_text.lower()
+            # If "acs" or "stemi" or "chest pain" => incorporate ACS
+            if any(x in text_lower for x in ["acs", "st elevation", "chest pain"]):
+                if "ACS" in evidence_based_guidelines["ESC"]:
+                    acs_data = evidence_based_guidelines["ESC"]["ACS"]
+                    sub_lines = ["**ESC Guidelines: ACS**"]
+                    for cat, items in acs_data.items():
+                        sub_lines.append(f"- {cat}: {items}")
+                    sub_sections.append("\n".join(sub_lines))
+            # If "pe", "pulmonary embolism" => incorporate PE
+            if "pe" in text_lower or "pulmonary embol" in text_lower:
+                if "PE" in evidence_based_guidelines["ESC"]:
+                    pe_data = evidence_based_guidelines["ESC"]["PE"]
+                    sub_lines = ["**ESC Guidelines: PE**"]
+                    for cat, items in pe_data.items():
+                        sub_lines.append(f"- {cat}: {items}")
+                    sub_sections.append("\n".join(sub_lines))
+            # If "heart failure", "hf", etc. => incorporate Heart Failure
+            if any(x in text_lower for x in ["hf", "heart failure"]):
+                if "Heart_Failure" in evidence_based_guidelines["ESC"]:
+                    hf_data = evidence_based_guidelines["ESC"]["Heart_Failure"]
+                    sub_lines = ["**ESC Guidelines: Heart Failure**"]
+                    for cat, items in hf_data.items():
+                        sub_lines.append(f"- {cat}: {items}")
+                    sub_sections.append("\n".join(sub_lines))
 
-def extract_pubmed_query(analysis_text: str) -> str:
-    """
-    Extract a focused PubMed query based on key terms in the analysis text.
-    
-    Args:
-        analysis_text: AI-generated analysis text.
-    
-    Returns:
-        A PubMed search query.
-    """
-    txt = analysis_text.lower()
-    if "pacemaker" in txt:
-        return "pacemaker leads chest x-ray"
-    elif "consolidation" in txt or "infiltrate" in txt:
-        return "lung consolidation chest x-ray"
+            # If no sub-conditions found, can show a summary of everything or skip
+            if not sub_sections:
+                esc_lines = ["**ESC Guidelines Summary**"]
+                for section_name, details in evidence_based_guidelines["ESC"].items():
+                    esc_lines.append(f"- {section_name}: {details}")
+                sub_sections.append("\n".join(esc_lines))
+
+            guidelines_sections.extend(sub_sections)
+
+    # Oncology => NCCN
+    if "oncology" in domains:
+        if "NCCN" in evidence_based_guidelines:
+            # Possibly detect sub-conditions: breast, lung, colorectal
+            text_lower = analysis_text.lower()
+            nccn_sections = []
+            if any(x in text_lower for x in ["breast", "mammogram"]):
+                # Use "Breast_Cancer" guidelines
+                bc_data = evidence_based_guidelines["NCCN"].get("Breast_Cancer", {})
+                bc_lines = ["**NCCN: Breast Cancer**"]
+                for heading, items in bc_data.items():
+                    bc_lines.append(f"- {heading}: {items}")
+                nccn_sections.append("\n".join(bc_lines))
+            elif "lung" in text_lower:
+                # Use "Lung_Cancer" guidelines
+                lc_data = evidence_based_guidelines["NCCN"].get("Lung_Cancer", {})
+                lc_lines = ["**NCCN: Lung Cancer**"]
+                for heading, items in lc_data.items():
+                    lc_lines.append(f"- {heading}: {items}")
+                nccn_sections.append("\n".join(lc_lines))
+            elif "colon" in text_lower or "colorectal" in text_lower:
+                cc_data = evidence_based_guidelines["NCCN"].get("Colorectal_Cancer", {})
+                cc_lines = ["**NCCN: Colorectal Cancer**"]
+                for heading, items in cc_data.items():
+                    cc_lines.append(f"- {heading}: {items}")
+                nccn_sections.append("\n".join(cc_lines))
+            else:
+                # fallback: show all oncology guidelines
+                fallback_lines = ["**NCCN Oncology Guidelines**"]
+                for cancer_type, details in evidence_based_guidelines["NCCN"].items():
+                    fallback_lines.append(f"- {cancer_type}: {details}")
+                nccn_sections.append("\n".join(fallback_lines))
+
+            guidelines_sections.extend(nccn_sections)
+
+    # Combine guidelines sections
+    if guidelines_sections:
+        return analysis_text + "\n\n" + "\n\n".join(guidelines_sections)
     else:
-        return "chest x-ray diagnostic findings"
+        return analysis_text
 
+
+################################################################################
+# PubMed Integration
+################################################################################
+
+def generate_domain_specific_pubmed_query(analysis_text: str, domains: List[str]) -> str:
+    """
+    Create a more targeted PubMed query based on recognized domain(s) and keywords
+    in the analysis text.
+    """
+    lower_text = analysis_text.lower()
+
+    # If "breast" or "mammogram" => breast imaging query
+    if "oncology" in domains and any(x in lower_text for x in ["breast", "mammogram"]):
+        return "breast mass imaging fibroadenoma or malignant tumor mammogram"
+
+    # If "lung" is present => possibly "lung nodule" or "lung cancer" imaging
+    if any(x in domains for x in ["oncology", "radiology"]) and "lung" in lower_text:
+        return "lung cancer imaging or lung nodule CT"
+
+    # If "heart" or "cardiac" => cardiology
+    if "cardiology" in domains:
+        if "pe" in lower_text:
+            return "pulmonary embolism esc guidelines or acute pe diagnosis"
+        elif "acs" in lower_text or "stemi" in lower_text:
+            return "acute coronary syndrome management or stemi guidelines"
+        else:
+            return "cardiac imaging or heart failure guidelines"
+
+    # If "colon" or "colorectal"
+    if "oncology" in domains and any(x in lower_text for x in ["colon", "colorectal"]):
+        return "colorectal cancer imaging or colon tumor"
+
+    # If none of the above
+    return "medical imaging diagnostic guidelines"
 
 @lru_cache(maxsize=32)
-def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
+def fetch_pubmed_sync_cached(query: str, max_results: int = 5) -> List[str]:
     """
-    A cached wrapper around the synchronous function that queries PubMed.
-    This helps avoid multiple identical API calls.
+    Cached wrapper for the synchronous PubMed fetch.
     """
     return fetch_pubmed_articles_sync(query, max_results)
 
-
-async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
+async def fetch_pubmed_references(analysis_text: str, domains: List[str]) -> str:
     """
-    Asynchronously fetch PubMed references by wrapping the synchronous query function in a thread.
-    
-    Args:
-        query: The search query.
-        max_results: Maximum number of articles to retrieve.
-    
-    Returns:
-        A formatted string containing PubMed references.
+    Build a domain-based query and fetch references from PubMed.
     """
-    refs = await asyncio.to_thread(fetch_pubmed_articles_sync_cached, query, max_results)
+    query = generate_domain_specific_pubmed_query(analysis_text, domains)
+    refs = await asyncio.to_thread(fetch_pubmed_sync_cached, query, 3)
     if refs:
-        return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
+        lines = ["**Relevant PubMed References:**"]
+        lines.extend(f"- {r}" for r in refs)
+        return "\n".join(lines)
     return "No PubMed references found."
 
 
-############################################
-# OpenAI Prompt Definition
-############################################
+################################################################################
+# OpenAI Prompt
+################################################################################
 
 system_prompt = (
-    "You are a medical imaging AI assistant. Generate a clear, evidence-based report using headings:\n\n"
-    "## Image Characteristics (Certainty: in percentage)\n- Modality:\n- Quality:\n- Findings:\n\n"
-    "## Pattern Recognition (Certainty: in percentage)\n- Key patterns:\n\n"
-    "## Clinical Considerations (Certainty: in percentage)\n- Next steps:\n- Differentials:\n\n"
-    "## Summary\n- Bullet points of final insights.\n\n"
-    "Use plain language, incorporate patient demographics, and avoid excessive jargon. "
-    "Do NOT include any disclaimers about inability to analyze images – provide direct analysis. "
-    "Proceed with detailed interpretation of the provided medical image."
+    "You are an advanced medical imaging AI assistant. Analyze the provided image, then generate a structured report "
+    "with headings for 'Image Characteristics', 'Pattern Recognition', 'Clinical Considerations', and a short 'Summary'. "
+    "Do not disclaim inability to diagnose. Provide direct, concise interpretation. "
 )
 
-
-############################################
-# API Endpoints
-############################################
+################################################################################
+# FastAPI Endpoints
+################################################################################
 
 @app.post("/analyze-image/", response_class=JSONResponse)
 async def analyze_image(
     file: UploadFile = File(...),
-    age: Optional[int] = Query(None, description="Patient's age"),
-    sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
+    age: Optional[int] = Query(None, description="Patient's age (optional)"),
+    sex: Optional[str] = Query(None, description="Patient's sex (optional)"),
 ) -> Dict[str, Any]:
     """
-    Analyze an uploaded medical image and return a detailed AI-generated report.
+    Upload a medical image (DICOM or standard), generate an AI-based analysis,
+    append relevant guidelines & references, then store in MongoDB.
     """
     try:
-        if age is not None:
-            logger.info(f"Patient age: {age}")
-        if sex is not None:
-            logger.info(f"Patient sex: {sex}")
-
         raw_data = await file.read()
         filename = file.filename.lower()
 
-        # Process the medical image (resizing if needed)
+        # Process the image
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Prepare messages for AI
+        # Prepare chat messages
         messages = [
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Analyze this medical image."},
+                    {"type": "text", "text": f"Patient age: {age}, sex: {sex}. Analyze this medical image."},
                     {"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}
-                ]
-            }
+                ],
+            },
         ]
 
-        # Generate analysis using the AI model if client is available
-        if client is None:
-            logger.warning("OpenAI client not initialized.")
+        # Generate analysis from OpenAI if available
+        if not openai_client:
+            logger.warning("OpenAI client not initialized, returning fallback analysis.")
             analysis = "AI analysis service unavailable."
         else:
-            response = await client.chat.completions.create(
-                model="gpt-4o",   # Replace with your actual model name if different
+            response = await openai_client.chat.completions.create(
+                model="gpt-4",  # or your chosen model
                 messages=messages,
-                max_tokens=2500,
-                temperature=0.3
+                max_tokens=2000,
+                temperature=0.3,
             )
             analysis = response.choices[0].message.content
 
-        # Process and enrich the analysis
+        # Reformat the analysis and detect domain(s)
         analysis = reformat_analysis(analysis)
-        differential_cats = select_differentials(analysis)
-        analysis = incorporate_differentials(analysis, differential_cats)
-        analysis = incorporate_guidelines(analysis, evidence_based_guidelines)
+        domains = detect_domains(analysis)
 
-        # Append PubMed references
-        pubmed_query = extract_pubmed_query(analysis)
-        pubmed_refs = await fetch_pubmed_references(pubmed_query)
-        analysis += "\n\n" + pubmed_refs
+        # Incorporate domain-specific guidelines
+        analysis = incorporate_guidelines_by_domain(analysis, domains)
 
-        # Store the report in MongoDB (wrapped sync call)
+        # Append relevant PubMed references
+        references = await fetch_pubmed_references(analysis, domains)
+        analysis = analysis + "\n\n" + references
+
+        # Store the final report in MongoDB
         await asyncio.to_thread(store_report, filename, analysis)
 
+        # Prepare response
         image_meta = {
             "dimensions": image.size,
             "mode": image.mode,
-            "format": "DICOM" if filename.endswith(".dcm") else "Standard"
+            "format": "DICOM" if filename.endswith(".dcm") else "Standard",
         }
-        return JSONResponse(content={
-            "filename": filename,
-            "image_metadata": image_meta,
-            "analysis": analysis
-        })
+
+        return JSONResponse(
+            content={
+                "filename": filename,
+                "image_metadata": image_meta,
+                "analysis": analysis,
+            }
+        )
+
     except HTTPException as http_exc:
         raise http_exc
-    except Exception as ex:
-        logger.error(f"Analysis pipeline failed: {ex}")
+    except Exception as e:
+        logger.error(f"Analysis pipeline failed: {e}")
         raise HTTPException(status_code=500, detail="AI analysis service unavailable")
 
 
 @app.get("/reports/", response_class=JSONResponse)
 async def get_all_reports() -> Dict[str, Any]:
-    """
-    Retrieve all stored diagnostic reports from MongoDB.
-    
-    Returns:
-        A JSON response containing a list of reports.
-    """
+    """List all stored reports from MongoDB."""
     reports = await asyncio.to_thread(list_reports)
     return JSONResponse(content={"reports": reports})
 
 
 @app.get("/download-report/{filename}", response_class=JSONResponse)
 async def download_report(filename: str) -> Dict[str, Any]:
-    """
-    Download a specific diagnostic report from MongoDB by filename.
-    
-    Args:
-        filename: The report filename.
-    
-    Returns:
-        A JSON response containing the report details.
-    
-    Raises:
-        HTTPException: If the report is not found.
-    """
+    """Retrieve a specific stored report by filename."""
     report = await asyncio.to_thread(get_report, filename)
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found in database.")
+        raise HTTPException(status_code=404, detail="Report not found")
     return JSONResponse(content=report)
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8002, reload=True)
