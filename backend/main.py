@@ -1,5 +1,5 @@
 """
-Advanced Main API for Medical Imaging AI Analysis
+Advanced Main API for Medical Imaging AI Analysis (Updated)
 
 This FastAPI backend processes medical images (DICOM and standard) using an AI model,
 integrates evidence-based guidelines with real-time PubMed references, and stores reports in MongoDB.
@@ -24,7 +24,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# MongoDB integration functions (synchronous)
+# MongoDB integration functions (synchronous).
+# Make sure these are defined properly in your models.py.
 from models import store_report, get_report, list_reports
 
 # Load configuration and validate OpenAI API key
@@ -39,8 +40,13 @@ if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
     logging.error("Invalid or missing OpenAI API key. Please check your configuration.")
     exit("Invalid API key. Exiting.")
 
-# Import evidence-based guidelines and differential dictionaries
+# Import dictionaries for differentials and guidelines
+# Ensure these are correctly defined in differentials.py
 from differentials import medical_differentials, evidence_based_guidelines
+
+# PubMed fetching function (synchronous) from pubmed.py
+# You can also implement an async version, but here we wrap sync calls in threads for concurrency.
+from pubmed import fetch_pubmed_articles_sync
 
 # Configure logging
 logging.basicConfig(
@@ -50,6 +56,7 @@ logging.basicConfig(
 logger = logging.getLogger("MedicalImagingAI")
 
 # Initialize asynchronous OpenAI client
+# Replace with your own method of using OpenAI if you prefer the standard `import openai`.
 try:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
@@ -76,7 +83,9 @@ app.add_middleware(
 
 # Constants
 MIN_RESOLUTION: int = 512
-REQUIRED_DISCLAIMER: str = "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
+REQUIRED_DISCLAIMER: str = (
+    "\n\n*AI-generated analysis – Must be validated by a board-certified radiologist*"
+)
 
 ############################################
 # Utility Functions
@@ -134,12 +143,14 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
     """
     try:
         if filename.endswith(".dcm"):
+            # Process DICOM
             dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
             validate_dicom_metadata(dicom_obj)
             pixel_array = dicom_obj.pixel_array
             norm_array = ((pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255).astype(np.uint8)
             image = Image.fromarray(norm_array)
         else:
+            # Process a standard image
             image = Image.open(io.BytesIO(raw_data))
             if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
@@ -204,7 +215,7 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
 
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
     """
-    Append additional differential diagnosis details from the medical_differentials dictionary.
+    Append additional differential diagnosis details from the `medical_differentials` dictionary.
     
     Args:
         analysis_text: Current analysis text.
@@ -214,29 +225,23 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
         Analysis text enriched with differential details.
     """
     extra_info = []
-    try:
-        radiology_diff = medical_differentials.get("Radiology", {})
-    except Exception as e:
-        logger.error(f"Error retrieving Radiology differentials: {e}")
-        radiology_diff = {}
+    # Retrieve Radiology data from the dictionary
+    radiology_diff = medical_differentials.get("Radiology", {})
 
     for cat in categories:
-        try:
-            # Assume radiology_diff is a dictionary mapping condition names to details
-            cat_data = radiology_diff.get(cat, {})
-            lines = [f"**Additional {cat} Differentials:**"]
-            # If cat_data is a dictionary of sub-entries, iterate over them
-            if isinstance(cat_data, dict):
-                for subcat, details in cat_data.items():
-                    if isinstance(details, dict):
-                        desc = details.get("Description", "No description available.")
-                        lines.append(f"- **{subcat}**: {desc}")
-                    else:
-                        lines.append(f"- {subcat}: {details}")
-            extra_info.append("\n".join(lines))
-        except Exception as e:
-            logger.warning(f"Error incorporating differentials for {cat}: {e}")
+        cat_data = radiology_diff.get(cat, {})
+        if not cat_data:
             continue
+        lines = [f"**Additional {cat} Differentials:**"]
+        if isinstance(cat_data, dict):
+            # If cat_data is a dict of subcategories
+            for subcat, details in cat_data.items():
+                if isinstance(details, dict):
+                    desc = details.get("Description", "No description available.")
+                    lines.append(f"- **{subcat}**: {desc}")
+                else:
+                    lines.append(f"- {subcat}: {details}")
+        extra_info.append("\n".join(lines))
     if extra_info:
         return analysis_text + "\n\n" + "\n\n".join(extra_info)
     return analysis_text
@@ -248,7 +253,7 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any]) -> st
     
     Args:
         analysis_text: Current analysis text.
-        guidelines: Guidelines information.
+        guidelines: Guidelines information from `evidence_based_guidelines`.
     
     Returns:
         Analysis text enriched with guideline summaries.
@@ -258,11 +263,14 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any]) -> st
         glines.append(f"**{org} Guidelines Summary:**")
         for topic, details in topics.items():
             if isinstance(details, dict):
+                # Format dictionary details
                 points = ", ".join(f"{k}: {v}" for k, v in details.items())
                 glines.append(f"- {topic}: {points}")
             elif isinstance(details, list):
+                # Format list details
                 glines.append(f"- {topic}: " + ", ".join(details))
             else:
+                # Simple string details
                 glines.append(f"- {topic}: {details}")
     if glines:
         return analysis_text + "\n\n" + "\n".join(glines)
@@ -289,68 +297,17 @@ def extract_pubmed_query(analysis_text: str) -> str:
 
 
 @lru_cache(maxsize=32)
-def fetch_pubmed_articles_sync(query: str, max_results: int = 3) -> List[str]:
+def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
     """
-    Synchronously query PubMed for articles related to the provided query.
-    
-    Caches results to minimize redundant network calls.
-    
-    Args:
-        query: The search query.
-        max_results: Maximum number of articles to retrieve.
-    
-    Returns:
-        A list of formatted reference strings.
+    A cached wrapper around the synchronous function that queries PubMed.
+    This helps avoid multiple identical API calls.
     """
-    pubmed_api = os.getenv("PUB_MED_API")
-    if not pubmed_api:
-        return ["No PubMed API key provided."]
-    
-    esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-    
-    params = {
-        "db": "pubmed",
-        "term": query,
-        "retmode": "json",
-        "retmax": max_results,
-        "api_key": pubmed_api
-    }
-    try:
-        search_resp = httpx.get(esearch_url, params=params)
-        if search_resp.status_code != 200:
-            return ["PubMed search failed."]
-        data = search_resp.json()
-        ids = data.get("esearchresult", {}).get("idlist", [])
-        if not ids:
-            return ["No relevant PubMed articles found."]
-        
-        params = {
-            "db": "pubmed",
-            "id": ",".join(ids),
-            "retmode": "json",
-            "api_key": pubmed_api
-        }
-        summary_resp = httpx.get(esummary_url, params=params)
-        if summary_resp.status_code != 200:
-            return ["PubMed summary retrieval failed."]
-        sum_data = summary_resp.json().get("result", {})
-        
-        refs = []
-        for pid in ids:
-            article = sum_data.get(pid, {})
-            title = article.get("title", "No title")
-            pubdate = article.get("pubdate", "Unknown date")
-            source = article.get("source", "Unknown source")
-            link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
-            refs.append(f"**{title}** ({pubdate}, {source}) [Read more]({link})")
-        return refs
-    except Exception as e:
-        return [f"Error retrieving PubMed references: {str(e)}"]
+    return fetch_pubmed_articles_sync(query, max_results)
+
 
 async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
     """
-    Asynchronously fetch PubMed references by wrapping the synchronous query function.
+    Asynchronously fetch PubMed references by wrapping the synchronous query function in a thread.
     
     Args:
         query: The search query.
@@ -359,10 +316,26 @@ async def fetch_pubmed_references(query: str, max_results: int = 3) -> str:
     Returns:
         A formatted string containing PubMed references.
     """
-    refs = await asyncio.to_thread(fetch_pubmed_articles_sync, query, max_results)
+    refs = await asyncio.to_thread(fetch_pubmed_articles_sync_cached, query, max_results)
     if refs:
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return "No PubMed references found."
+
+
+############################################
+# OpenAI Prompt Definition
+############################################
+
+system_prompt = (
+    "You are a medical imaging AI assistant. Generate a clear, evidence-based report using headings:\n\n"
+    "## Image Characteristics (Certainty: in percentage)\n- Modality:\n- Quality:\n- Findings:\n\n"
+    "## Pattern Recognition (Certainty: in percentage)\n- Key patterns:\n\n"
+    "## Clinical Considerations (Certainty: in percentage)\n- Next steps:\n- Differentials:\n\n"
+    "## Summary\n- Bullet points of final insights.\n\n"
+    "Use plain language, incorporate patient demographics, and avoid excessive jargon. "
+    "Do NOT include any disclaimers about inability to analyze images – provide direct analysis. "
+    "Proceed with detailed interpretation of the provided medical image."
+)
 
 
 ############################################
@@ -386,20 +359,11 @@ async def analyze_image(
 
         raw_data = await file.read()
         filename = file.filename.lower()
+
+        # Process the medical image (resizing if needed)
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Construct the system prompt for AI analysis
-        system_prompt = (
-            "You are a medical imaging AI assistant. Generate a clear, evidence-based report using headings:\n\n"
-            "## Image Characteristics (Certainty: in percentage)\n- Modality:\n- Quality:\n- Findings:\n\n"
-            "## Pattern Recognition (Certainty: in percentage)\n- Key patterns:\n\n"
-            "## Clinical Considerations (Certainty: in percentage)\n- Next steps:\n- Differentials:\n\n"
-            "## Summary\n- Bullet points of final insights.\n\n"
-            "Use plain language, incorporate patient demographics, and avoid excessive jargon. "
-            "Do NOT include any disclaimers about inability to analyze images – provide direct analysis. "
-            "Proceed with detailed interpretation of the provided medical image."
-        )
-
+        # Prepare messages for AI
         messages = [
             {"role": "system", "content": system_prompt},
             {
@@ -411,19 +375,20 @@ async def analyze_image(
             }
         ]
 
+        # Generate analysis using the AI model if client is available
         if client is None:
             logger.warning("OpenAI client not initialized.")
             analysis = "AI analysis service unavailable."
         else:
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o",   # Replace with your actual model name if different
                 messages=messages,
                 max_tokens=2500,
                 temperature=0.3
             )
             analysis = response.choices[0].message.content
 
-        # Process and enrich the analysis report
+        # Process and enrich the analysis
         analysis = reformat_analysis(analysis)
         differential_cats = select_differentials(analysis)
         analysis = incorporate_differentials(analysis, differential_cats)
@@ -434,7 +399,7 @@ async def analyze_image(
         pubmed_refs = await fetch_pubmed_references(pubmed_query)
         analysis += "\n\n" + pubmed_refs
 
-        # Store report in MongoDB asynchronously (wrap synchronous call)
+        # Store the report in MongoDB (wrapped sync call)
         await asyncio.to_thread(store_report, filename, analysis)
 
         image_meta = {
