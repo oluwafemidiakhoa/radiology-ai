@@ -1,142 +1,130 @@
+"""
+PubMed-related utility functions (Updated)
+
+Provides synchronous and optional asynchronous methods to fetch article references from PubMed.
+Requires the 'PUB_MED_API' key in .env or environment variables.
+"""
+
 import os
 import logging
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()  # Ensure environment variables are loaded
 
 logger = logging.getLogger("PubMed")
 logger.setLevel(logging.INFO)
 
-# Read PubMed API key from environment
 PUBMED_API_KEY = os.getenv("PUB_MED_API")
 if not PUBMED_API_KEY:
-    logger.error("PUB_MED_API is not set in the environment. PubMed references will not be fetched.")
+    logger.warning("PUB_MED_API is not set in the environment. PubMed references may be unavailable.")
 
-def fetch_pubmed_articles(query, max_results=5):
+def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
     """
-    Fetches relevant PubMed articles based on the given query.
+    Synchronous function to fetch relevant PubMed articles based on a given query.
     Returns a list of formatted references.
     """
+    if not PUBMED_API_KEY:
+        return ["No PubMed API key provided."]
+
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-    
-    params = {
+    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+    search_params = {
         "db": "pubmed",
         "term": query,
         "retmode": "json",
         "retmax": max_results,
         "api_key": PUBMED_API_KEY
     }
-    
+
     try:
-        logger.info(f"Searching PubMed with query: {query}")
-        response = httpx.get(esearch_url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        id_list = data.get("esearchresult", {}).get("idlist", [])
-        if not id_list:
+        logger.info(f"Searching PubMed with query: '{query}'")
+        search_resp = httpx.get(esearch_url, params=search_params)
+        search_resp.raise_for_status()
+
+        data = search_resp.json()
+        ids = data.get("esearchresult", {}).get("idlist", [])
+        if not ids:
             logger.info("No relevant article IDs found for query.")
             return ["No relevant PubMed articles found."]
-        return fetch_article_details(id_list)
+
+        summary_params = {
+            "db": "pubmed",
+            "id": ",".join(ids),
+            "retmode": "json",
+            "api_key": PUBMED_API_KEY
+        }
+
+        summary_resp = httpx.get(esummary_url, params=summary_params)
+        summary_resp.raise_for_status()
+
+        sum_data = summary_resp.json().get("result", {})
+        references = []
+        for pid in ids:
+            article = sum_data.get(pid, {})
+            title = article.get("title", "No title")
+            pubdate = article.get("pubdate", "Unknown date")
+            source = article.get("source", "Unknown source")
+            link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
+            references.append(f"**{title}** ({pubdate}, {source}) [Read more]({link})")
+
+        return references if references else ["No relevant PubMed articles found."]
     except Exception as e:
         logger.error(f"Error fetching PubMed articles: {e}")
         return [f"Error retrieving PubMed references: {str(e)}"]
 
-def fetch_article_details(article_ids):
-    """
-    Retrieves detailed information for PubMed articles (title, journal, pubdate, link).
-    Returns a list of formatted reference strings.
-    """
-    if not article_ids:
-        return ["No relevant PubMed references found."]
-    
-    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-    params = {
-        "db": "pubmed",
-        "id": ",".join(article_ids),
-        "retmode": "json",
-        "api_key": PUBMED_API_KEY
-    }
-    
-    try:
-        response = httpx.get(esummary_url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        result = data.get("result", {})
-        references = []
-        for pid in article_ids:
-            article = result.get(pid)
-            if article:
-                title = article.get("title", "No title available")
-                journal = article.get("source", "Unknown journal")
-                pubdate = article.get("pubdate", "Unknown date")
-                link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
-                references.append(f"**{title}** - {journal} ({pubdate}) [Read more]({link})")
-        if not references:
-            return ["No relevant PubMed articles found."]
-        return references
-    except Exception as e:
-        logger.error(f"Error fetching article details: {e}")
-        return [f"Error retrieving PubMed references: {str(e)}"]
 
-# Optional asynchronous functions for enhanced performance
-async def async_fetch_pubmed_articles(query, max_results=5):
+# Optional Async Implementation
+async def async_fetch_pubmed_articles(query: str, max_results: int = 5):
     """
     Asynchronously fetches relevant PubMed articles based on the given query.
     Returns a list of formatted references.
     """
+    if not PUBMED_API_KEY:
+        return ["No PubMed API key provided."]
+
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-    params = {
-        "db": "pubmed",
-        "term": query,
-        "retmode": "json",
-        "retmax": max_results,
-        "api_key": PUBMED_API_KEY
-    }
+    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
     async with httpx.AsyncClient() as client:
         try:
-            logger.info(f"Async searching PubMed with query: {query}")
-            response = await client.get(esearch_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            id_list = data.get("esearchresult", {}).get("idlist", [])
-            if not id_list:
+            logger.info(f"Async searching PubMed with query: '{query}'")
+            search_params = {
+                "db": "pubmed",
+                "term": query,
+                "retmode": "json",
+                "retmax": max_results,
+                "api_key": PUBMED_API_KEY
+            }
+            search_resp = await client.get(esearch_url, params=search_params)
+            search_resp.raise_for_status()
+            data = search_resp.json()
+            ids = data.get("esearchresult", {}).get("idlist", [])
+            if not ids:
                 logger.info("No relevant article IDs found for query.")
                 return ["No relevant PubMed articles found."]
-            return await async_fetch_article_details(id_list)
-        except Exception as e:
-            logger.error(f"Async error fetching PubMed articles: {e}")
-            return [f"Error retrieving PubMed references: {str(e)}"]
 
-async def async_fetch_article_details(article_ids):
-    """
-    Asynchronously retrieves detailed information for PubMed articles.
-    Returns a list of formatted reference strings.
-    """
-    if not article_ids:
-        return ["No relevant PubMed references found."]
-    
-    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-    params = {
-        "db": "pubmed",
-        "id": ",".join(article_ids),
-        "retmode": "json",
-        "api_key": PUBMED_API_KEY
-    }
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(esummary_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            result = data.get("result", {})
+            summary_params = {
+                "db": "pubmed",
+                "id": ",".join(ids),
+                "retmode": "json",
+                "api_key": PUBMED_API_KEY
+            }
+            summary_resp = await client.get(esummary_url, params=summary_params)
+            summary_resp.raise_for_status()
+            sum_data = summary_resp.json().get("result", {})
+
             references = []
-            for pid in article_ids:
-                article = result.get(pid, {})
-                title = article.get("title", "No title available")
+            for pid in ids:
+                article = sum_data.get(pid, {})
+                title = article.get("title", "No title")
                 pubdate = article.get("pubdate", "Unknown date")
                 source = article.get("source", "Unknown source")
                 link = f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
-                references.append(f"**{title}** - {source} ({pubdate}) [Read more]({link})")
-            if not references:
-                return ["No relevant PubMed articles found."]
-            return references
+                references.append(f"**{title}** ({pubdate}, {source}) [Read more]({link})")
+
+            return references if references else ["No relevant PubMed articles found."]
         except Exception as e:
-            logger.error(f"Async error fetching article details: {e}")
+            logger.error(f"Async error fetching PubMed articles: {e}")
             return [f"Error retrieving PubMed references: {str(e)}"]
