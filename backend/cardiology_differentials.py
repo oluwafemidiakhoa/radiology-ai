@@ -41,18 +41,29 @@ class CardiologyDifferential:
         return asdict(self)
 
     def formatted_summary(self) -> str:
-        """Returns a formatted multi-line summary of the differential diagnosis."""
-        return (
-            f"Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors) + "\n\n"
-            f"Risk Factors:\n  - " + "\n  - ".join(self.risk_factors) + "\n\n"
-            f"Epidemiology:\n  {self.epidemiology}\n\n"
-            f"Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations) + "\n\n"
-            f"Recommendations:\n  - " + "\n  - ".join(self.recommendations) + "\n\n"
-            f"Recent Research:\n  {self.recent_research}\n\n"
-            f"ML Insights:\n  {self.ml_insights}\n"
-        )
+        """
+        Returns a formatted multi-line summary of the differential diagnosis.
+        Fields that are empty will be omitted from the summary.
+        """
+        parts = []
+        if self.imaging_descriptors:
+            parts.append("Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors))
+        if self.risk_factors:
+            parts.append("Risk Factors:\n  - " + "\n  - ".join(self.risk_factors))
+        if self.epidemiology:
+            parts.append(f"Epidemiology:\n  {self.epidemiology}")
+        if self.clinical_diagnostic_correlations:
+            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+        if self.recommendations:
+            parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
+        if self.recent_research:
+            parts.append(f"Recent Research:\n  {self.recent_research}")
+        if self.ml_insights:
+            parts.append(f"ML Insights:\n  {self.ml_insights}")
+        return "\n\n".join(parts)
 
-# Define the cardiology differentials (top-level and nested) in a dictionary
+
+# Define the cardiology differentials (top-level and nested) in a dictionary.
 cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]] = {
     "Myocardial Infarction (MI)": CardiologyDifferential(
         imaging_descriptors=[
@@ -210,8 +221,7 @@ def list_cardiology_differentials() -> Dict[str, Union[CardiologyDifferential, D
     List all available cardiology differentials.
 
     Returns:
-        Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]]:
-            A dictionary mapping condition names (or categories) to their differential data.
+        A dictionary mapping condition names (or categories) to their differential data.
     """
     # Return a shallow copy to prevent accidental mutation.
     return cardiology_differentials.copy()
