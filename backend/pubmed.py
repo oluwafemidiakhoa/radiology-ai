@@ -1,9 +1,16 @@
 """
-PubMed-related utility functions for Radiology, Cardiology, and Oncology (Updated)
+pubmed.py (Updated)
 
-Provides synchronous and optional asynchronous methods to query PubMed for references based on a
-given keyword or phrase. Adapt the queries based on the suspected pathology/modality
-(e.g., imaging for oncology, cardiology guidelines, or general radiology searches).
+PubMed-related utility functions for Radiology, Cardiology, and Oncology references.
+Includes both synchronous and optional asynchronous methods to query PubMed.
+
+Environment variable required:
+- PUB_MED_API: Your NCBI PubMed API key
+
+Usage:
+    from pubmed import fetch_pubmed_articles_sync, async_fetch_pubmed_articles
+    ...
+    references = fetch_pubmed_articles_sync("breast cancer imaging fibroadenoma")
 """
 
 import os
@@ -11,22 +18,26 @@ import logging
 import httpx
 from dotenv import load_dotenv
 
-load_dotenv()  # Ensure environment variables are loaded
+load_dotenv()  # Loads environment variables from .env if present
 
 logger = logging.getLogger("PubMed")
 logger.setLevel(logging.INFO)
 
 PUBMED_API_KEY = os.getenv("PUB_MED_API")
 if not PUBMED_API_KEY:
-    logger.warning("PUB_MED_API environment variable not found; PubMed fetch may be unavailable.")
+    logger.warning(
+        "PUB_MED_API environment variable is not set. "
+        "PubMed references may not be properly fetched."
+    )
+
 
 def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
     """
     Synchronous function to fetch relevant PubMed articles based on a given query string.
-    Ideal for Radiology, Cardiology, or Oncology topics.
+    This can be used for Radiology, Cardiology, or Oncology topics.
 
     Args:
-        query (str): The search query (e.g. 'breast cancer screening', 'ACS guidelines', 'CT imaging protocols').
+        query (str): The search query (e.g., 'breast cancer imaging fibroadenoma').
         max_results (int): Maximum number of articles to fetch.
 
     Returns:
@@ -38,6 +49,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 
+    # Define your query parameters
     search_params = {
         "db": "pubmed",
         "term": query,
@@ -83,15 +95,15 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
         return [f"Error retrieving PubMed references: {str(e)}"]
 
 
-# Optional asynchronous version if you prefer async in your FastAPI code:
+# Optional: Asynchronous version
 async def async_fetch_pubmed_articles(query: str, max_results: int = 5):
     """
-    Asynchronously fetch relevant PubMed articles for a given query. Suitable for
-    oncology, cardiology, or radiology reference retrieval.
+    Asynchronously fetch relevant PubMed articles for a given query.
+    Suited for multi-domain usage (oncology, cardiology, radiology).
 
     Args:
-        query (str): The search query (e.g. 'mammogram fibroadenoma', 'heart failure guidelines').
-        max_results (int): Maximum articles to retrieve.
+        query (str): The search query (e.g. "cardiac pacemaker complications").
+        max_results (int): Maximum number of articles to retrieve.
 
     Returns:
         List[str]: A list of formatted reference strings.
