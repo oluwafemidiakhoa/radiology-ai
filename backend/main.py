@@ -377,21 +377,6 @@ async def analyze_image(
 ) -> Dict[str, Any]:
     """
     Analyze an uploaded medical image and return a detailed AI-generated report.
-    
-    Processes DICOM and standard image files, generates an AI analysis using an OpenAI model,
-    enriches the report with differential diagnoses and evidence-based guidelines, appends PubMed references,
-    and stores the final report in MongoDB.
-    
-    Args:
-        file: The uploaded image file.
-        age: Optional patient age.
-        sex: Optional patient sex.
-    
-    Returns:
-        A JSON response containing the filename, image metadata, and AI analysis.
-    
-    Raises:
-        HTTPException: If processing or analysis fails.
     """
     try:
         if age is not None:
