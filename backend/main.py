@@ -1,8 +1,14 @@
 """
-Advanced Main API for Medical Imaging AI Analysis (Updated for Modality-Specific Guidelines)
+Advanced Main API for Medical Imaging AI Analysis (Updated with Histopathology Modality)
 
-This FastAPI backend processes medical images (DICOM and standard) using an AI model,
+This FastAPI backend processes medical images (including DICOM and standard) using an AI model,
 integrates evidence-based guidelines with real-time PubMed references, and stores reports in MongoDB.
+
+Changes in this version:
+1. Detects "Histopathology" modality from the AI analysis text or user input.
+2. Uses a refined PubMed query to retrieve references relevant to histopathology.
+3. Skips references if no relevant query is identified.
+4. Conditionally incorporates guidelines if a "Histopathology" section exists in evidence_based_guidelines.
 """
 
 import os
@@ -39,7 +45,7 @@ if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
     logging.error("Invalid or missing OpenAI API key. Please check your configuration.")
     exit("Invalid API key. Exiting.")
 
-# Import dictionaries for differentials and modality-specific guidelines.
+# Import dictionaries for differentials and guidelines
 from differentials import medical_differentials, evidence_based_guidelines
 
 # PubMed fetching function (synchronous) from pubmed.py
@@ -52,7 +58,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MedicalImagingAI")
 
-# Initialize asynchronous OpenAI client (or use openai if preferred)
+# Initialize asynchronous OpenAI client
 try:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
@@ -64,10 +70,10 @@ except ImportError as e:
 app = FastAPI(
     title="Medical Imaging AI with PubMed",
     description=(
-        "Advanced AI-based analysis of medical images, integrating evidence-based guidelines "
-        "and real-time PubMed references."
+        "Advanced AI-based analysis of medical images (including histopathology), "
+        "integrating evidence-based guidelines and real-time PubMed references."
     ),
-    version="1.1.0",
+    version="1.2.0",
 )
 app.add_middleware(
     CORSMiddleware,
@@ -111,14 +117,14 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
     """
     try:
         if filename.endswith(".dcm"):
-            # Process DICOM image
+            # Process DICOM
             dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
             validate_dicom_metadata(dicom_obj)
             pixel_array = dicom_obj.pixel_array
             norm_array = ((pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255).astype(np.uint8)
             image = Image.fromarray(norm_array)
         else:
-            # Process standard image
+            # Process a standard image
             image = Image.open(io.BytesIO(raw_data))
             if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
@@ -142,19 +148,6 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         raise HTTPException(status_code=500, detail="Image processing failed.")
 
 
-def select_differentials(analysis: str) -> List[str]:
-    """Select differential diagnosis categories based on keywords in the analysis text."""
-    selected = []
-    text = analysis.lower()
-    if "pacemaker" in text:
-        selected.append("Cardiology")
-    if "consolidation" in text or "infiltrate" in text:
-        selected.append("Pulmonary")
-    if "scoliosis" in text:
-        selected.append("Musculoskeletal")
-    return selected
-
-
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """Standardize and reformat the AI analysis text, appending a disclaimer if needed."""
     lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
@@ -164,8 +157,30 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     return formatted
 
 
+############################################
+# Incorporating Differentials and Guidelines
+############################################
+
+def select_differentials(analysis: str) -> List[str]:
+    """
+    Example placeholder:
+    Select differential categories based on keywords in the analysis text.
+    Expand or refine for your specific use cases.
+    """
+    selected = []
+    text = analysis.lower()
+    if "pacemaker" in text:
+        selected.append("Cardiology")
+    if "consolidation" in text or "infiltrate" in text:
+        selected.append("Pulmonary")
+    if "scoliosis" in text:
+        selected.append("Musculoskeletal")
+    # You can add more logic here if needed.
+    return selected
+
+
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
-    """Append additional differential diagnosis details from the medical_differentials dictionary."""
+    """Append additional differential diagnosis details from the `medical_differentials` dictionary."""
     extra_info = []
     radiology_diff = medical_differentials.get("Radiology", {})
 
@@ -176,9 +191,9 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
         lines = [f"**Additional {cat} Differentials:**"]
         if isinstance(cat_data, dict):
             for subcat, details in cat_data.items():
-                if isinstance(details, dict):
-                    desc = details.get("Description", "No description available.")
-                    lines.append(f"- **{subcat}**: {desc}")
+                if hasattr(details, "formatted_summary"):
+                    # If details is a RadiologyDifferential or similar
+                    lines.append(f"- {subcat}: {details.formatted_summary()}")
                 else:
                     lines.append(f"- {subcat}: {details}")
         extra_info.append("\n".join(lines))
@@ -190,11 +205,12 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
 def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modality: str) -> str:
     """
     Append a summary of modality-specific evidence-based guidelines to the analysis text.
-    Only guidelines relevant to the provided modality (e.g., "ChestXRay", "Mammogram") are added.
+    For example, "ChestXRay", "Mammogram", "Histopathology", etc.
+    If no guidelines exist for the given modality, it will skip appending.
     """
     selected_guidelines = guidelines.get(modality, {})
     if not selected_guidelines:
-        return analysis_text
+        return analysis_text  # No guidelines for this modality
 
     glines = []
     for guideline_name, details in selected_guidelines.items():
@@ -211,22 +227,9 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modal
     return analysis_text
 
 
-def extract_pubmed_query(analysis_text: str) -> Optional[str]:
-    """
-    Extract a focused PubMed query based on key terms in the analysis text.
-    For a normal chest X-ray, returns a specific query; returns None if no references are needed.
-    """
-    text_lower = analysis_text.lower()
-    if "normal chest x-ray" in text_lower and ("no abnormalities" in text_lower or "normal" in text_lower):
-        # Skip adding references for a completely normal exam.
-        return None
-    if "pneumonia" in text_lower or "infiltrate" in text_lower:
-        return "pneumonia chest x-ray findings"
-    if "nodule" in text_lower:
-        return "pulmonary nodule chest x-ray follow-up"
-    # Default fallback
-    return "chest x-ray diagnostic approach"
-
+############################################
+# PubMed Query and Fetching
+############################################
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
@@ -237,7 +240,7 @@ def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[
 async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) -> str:
     """
     Asynchronously fetch PubMed references by wrapping the synchronous query function.
-    If the query is None, returns an empty string.
+    If the query is None or empty, returns an empty string.
     """
     if not query:
         return ""
@@ -245,6 +248,34 @@ async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) ->
     if refs:
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return ""
+
+
+def extract_pubmed_query(analysis_text: str) -> Optional[str]:
+    """
+    Refined function to generate a PubMed query specific to the recognized modality or keywords.
+    If no relevant keywords are found, returns None (skips references).
+    """
+    txt = analysis_text.lower()
+
+    # Histopathology-specific logic
+    if "histopathology" in txt or "microscopic" in txt or "ductal" in txt or "fibroadenoma" in txt:
+        # Adjust your query to target histopathology or breast pathology
+        return "fibroadenoma breast histopathology OR immunohistochemistry"
+
+    # Chest X-ray logic
+    if "normal chest x-ray" in txt:
+        return "normal chest x-ray screening recommendations"
+    elif "pneumonia" in txt or "infiltrate" in txt:
+        return "pneumonia chest x-ray findings"
+    elif "nodule" in txt:
+        return "pulmonary nodule chest x-ray follow-up"
+
+    # Mammogram logic
+    if "mammogram" in txt or "breast mass" in txt:
+        return "breast mass mammogram fibroadenoma or cyst"
+
+    # If no matches, return None to skip references
+    return None
 
 
 ############################################
@@ -258,7 +289,7 @@ system_prompt = (
     "## Clinical Considerations (Certainty: in percentage)\n- Next steps:\n- Differentials:\n\n"
     "## Summary\n- Bullet points of final insights.\n\n"
     "Use plain language, incorporate patient demographics, and avoid excessive jargon. "
-    "Do NOT include any disclaimers about inability to analyze images – provide direct analysis. "
+    "Do NOT include disclaimers about inability to analyze images – provide direct analysis. "
     "Proceed with detailed interpretation of the provided medical image."
 )
 
@@ -274,7 +305,7 @@ async def analyze_image(
     sex: Optional[str] = Query(None, description="Patient's sex (Male/Female)")
 ) -> Dict[str, Any]:
     """
-    Analyze an uploaded medical image and return a detailed AI-generated report.
+    Analyze an uploaded medical or histopathology image and return a detailed AI-generated report.
     Processes DICOM and standard image files, generates an AI analysis using an OpenAI model,
     enriches the report with differential diagnoses, modality-specific guidelines, and targeted PubMed references,
     and stores the final report in MongoDB.
@@ -316,31 +347,39 @@ async def analyze_image(
             )
             analysis = response.choices[0].message.content
 
-        # Reformat the analysis and incorporate differentials
+        # Reformat the analysis
         analysis = reformat_analysis(analysis)
+
+        # Incorporate differentials (optional logic)
         differential_cats = select_differentials(analysis)
         analysis = incorporate_differentials(analysis, differential_cats)
 
-        # Determine modality for guidelines. For DICOM images, try to use the DICOM tag.
+        # Determine modality for guidelines
+        # (1) If it's a DICOM, check DICOM tags. If not, fallback to text heuristics.
         modality = "General"
         if filename.endswith(".dcm"):
             try:
                 dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
                 modality_tag = getattr(dicom_obj, "Modality", "").upper()
-                if modality_tag in ["CR", "DR", "DX", "RF"]:  # Common X-ray modalities
+                if modality_tag in ["CR", "DR", "DX", "RF"]:
                     modality = "ChestXRay"
-                elif modality_tag in ["MG"]:
+                elif modality_tag == "MG":
                     modality = "Mammogram"
+                elif modality_tag == "SM":  # Example for slide microscopy
+                    modality = "Histopathology"
             except Exception:
                 modality = "General"
         else:
-            # For standard images, a simple heuristic based on analysis text.
-            if "chest" in analysis.lower():
+            # For standard images, we do a heuristic check in the analysis text
+            lower_analysis = analysis.lower()
+            if "histopathology" in lower_analysis or "microscopic" in lower_analysis or "ductal" in lower_analysis:
+                modality = "Histopathology"
+            elif "chest" in lower_analysis:
                 modality = "ChestXRay"
-            elif "mammogram" in analysis.lower():
+            elif "mammogram" in lower_analysis or "breast" in lower_analysis:
                 modality = "Mammogram"
 
-        # Incorporate modality-specific guidelines
+        # Incorporate modality-specific guidelines if available
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines, modality)
 
         # Append targeted PubMed references
@@ -349,7 +388,7 @@ async def analyze_image(
         if pubmed_refs:
             analysis += "\n\n" + pubmed_refs
 
-        # Store report in MongoDB (wrapped synchronous call)
+        # Store the report in MongoDB
         await asyncio.to_thread(store_report, filename, analysis)
 
         image_meta = {
