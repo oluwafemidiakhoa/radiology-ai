@@ -44,7 +44,7 @@ if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
 # Import the updated guidelines dictionary & retrieval functions
 from evidence_based_guidelines import evidence_based_guidelines
 
-# Import synchronous PubMed fetch function (or the async one if you prefer).
+# Import synchronous PubMed fetch function.
 from pubmed import fetch_pubmed_articles_sync
 
 # Configure logging
@@ -54,7 +54,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MedicalImagingAI")
 
-# Initialize the asynchronous OpenAI client using the latest OpenAI SDK
+# Initialize the asynchronous OpenAI client using the latest SDK
 try:
     from openai import AsyncOpenAI
     openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
@@ -356,14 +356,15 @@ async def analyze_image(
         # Process the image and generate a base64 URL
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Prepare chat messages. Note: The image block now uses "type": "image" (supported by GPT-4o)
+        # Prepare chat messages.
+        # Note: We now use "file" as the type (supported value) for image inputs.
         messages = [
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": f"Patient age: {age}, sex: {sex}. Analyze this medical image."},
-                    {"type": "image", "image": {"url": data_url, "detail": "high"}}
+                    {"type": "file", "file": {"url": data_url, "detail": "high"}}
                 ],
             },
         ]
@@ -374,7 +375,7 @@ async def analyze_image(
             analysis = "AI analysis service unavailable."
         else:
             response = await openai_client.chat.completions.create(
-                model="gpt-4o",  # Use the GPT-4o multimodal model
+                model="gpt-4o",  # Using the GPT-4o multimodal model
                 messages=messages,
                 max_tokens=2000,
                 temperature=0.3,
