@@ -29,15 +29,23 @@ class RadiologyDifferential:
 
     def formatted_summary(self) -> str:
         """Return a formatted multi-line summary of the differential diagnosis."""
-        return (
-            f"Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors) + "\n\n"
-            f"Risk Factors:\n  - " + "\n  - ".join(self.risk_factors) + "\n\n"
-            f"Epidemiology:\n  {self.epidemiology}\n\n"
-            f"Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations) + "\n\n"
-            f"Recommendations:\n  - " + "\n  - ".join(self.recommendations) + "\n\n"
-            f"Recent Research:\n  {self.recent_research}\n\n"
-            f"ML Insights:\n  {self.ml_insights}\n"
-        )
+        parts = []
+        if self.imaging_descriptors:
+            parts.append("Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors))
+        if self.risk_factors:
+            parts.append("Risk Factors:\n  - " + "\n  - ".join(self.risk_factors))
+        if self.epidemiology:
+            parts.append(f"Epidemiology:\n  {self.epidemiology}")
+        if self.clinical_diagnostic_correlations:
+            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+        if self.recommendations:
+            parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
+        if self.recent_research:
+            parts.append(f"Recent Research:\n  {self.recent_research}")
+        if self.ml_insights:
+            parts.append(f"ML Insights:\n  {self.ml_insights}")
+        return "\n\n".join(parts)
+
 
 # Define the radiology differentials organized by category.
 radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
