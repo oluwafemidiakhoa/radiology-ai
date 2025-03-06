@@ -37,15 +37,23 @@ class OncologyDifferential:
 
     def formatted_summary(self) -> str:
         """Returns a formatted multi-line summary of the differential diagnosis."""
-        return (
-            f"Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors) + "\n\n"
-            f"Risk Factors:\n  - " + "\n  - ".join(self.risk_factors) + "\n\n"
-            f"Epidemiology:\n  {self.epidemiology}\n\n"
-            f"Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations) + "\n\n"
-            f"Recommendations:\n  - " + "\n  - ".join(self.recommendations) + "\n\n"
-            f"Recent Research:\n  {self.recent_research}\n\n"
-            f"ML Insights:\n  {self.ml_insights}\n"
-        )
+        parts = []
+        if self.imaging_descriptors:
+            parts.append("Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors))
+        if self.risk_factors:
+            parts.append("Risk Factors:\n  - " + "\n  - ".join(self.risk_factors))
+        if self.epidemiology:
+            parts.append(f"Epidemiology:\n  {self.epidemiology}")
+        if self.clinical_diagnostic_correlations:
+            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+        if self.recommendations:
+            parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
+        if self.recent_research:
+            parts.append(f"Recent Research:\n  {self.recent_research}")
+        if self.ml_insights:
+            parts.append(f"ML Insights:\n  {self.ml_insights}")
+        return "\n\n".join(parts)
+
 
 # Define the oncology differentials using the dataclass structure.
 oncology_differentials: Dict[str, OncologyDifferential] = {
@@ -57,7 +65,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Nipple retraction",
             "Skin thickening",
             "Lymphadenopathy",
-            "Ductal irregularities",
+            "Ductal irregularities"
         ],
         risk_factors=[
             "Age",
@@ -67,7 +75,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Nulliparity or late first pregnancy",
             "Hormone replacement therapy",
             "Obesity",
-            "Alcohol consumption",
+            "Alcohol consumption"
         ],
         epidemiology="Most common cancer in women worldwide; incidence increases in high-risk populations.",
         clinical_diagnostic_correlations=[
@@ -75,7 +83,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Nipple discharge",
             "Skin changes",
             "Lymph node enlargement",
-            "Breast pain",
+            "Breast pain"
         ],
         recommendations=[
             "Mammography and digital breast tomosynthesis",
@@ -89,13 +97,13 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Hormone therapy",
             "Targeted therapy",
             "Immunotherapy",
-            "Molecular subtyping (HER2, ER, PR testing)",
+            "Molecular subtyping (HER2, ER, PR testing)"
         ],
         recent_research=(
             "Emerging liquid biopsy techniques and AI-enhanced imaging are revolutionizing early detection "
             "and personalized treatment."
         ),
-        ml_insights="Machine learning models now accurately predict tumor receptor status from imaging alone.",
+        ml_insights="Machine learning models now accurately predict tumor receptor status from imaging alone."
     ),
     "Prostate Cancer": OncologyDifferential(
         imaging_descriptors=[
@@ -103,21 +111,21 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Reduced diffusion on MRI",
             "Elevated choline/citrate ratio on MR spectroscopy",
             "Bone metastases",
-            "Heterogeneous signal intensity",
+            "Heterogeneous signal intensity"
         ],
         risk_factors=[
             "Age",
             "Family history",
             "African American ethnicity",
             "High-fat diet",
-            "Obesity",
+            "Obesity"
         ],
         epidemiology="Most common cancer in men; risk increases significantly with age.",
         clinical_diagnostic_correlations=[
             "Elevated PSA levels",
             "Urinary symptoms (frequency, urgency, nocturia)",
             "Bone pain (in metastatic cases)",
-            "Erectile dysfunction",
+            "Erectile dysfunction"
         ],
         recommendations=[
             "PSA testing",
@@ -130,10 +138,10 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Radiation therapy",
             "Hormone therapy",
             "Chemotherapy",
-            "Molecular profiling for targeted treatment",
+            "Molecular profiling for targeted treatment"
         ],
         recent_research="Advances in multiparametric MRI and genomic classifiers are refining risk stratification.",
-        ml_insights="Deep learning algorithms can now segment prostate lesions with high precision, aiding in biopsy targeting.",
+        ml_insights="Deep learning algorithms can now segment prostate lesions with high precision, aiding in biopsy targeting."
     ),
     "Colorectal Cancer": OncologyDifferential(
         imaging_descriptors=[
@@ -143,7 +151,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Lymph node metastases",
             "Liver metastases",
             "Peritoneal implants",
-            "Mucosal irregularities",
+            "Mucosal irregularities"
         ],
         risk_factors=[
             "Age",
@@ -152,7 +160,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Diet high in red and processed meat",
             "Smoking",
             "Obesity",
-            "Alcohol consumption",
+            "Alcohol consumption"
         ],
         epidemiology="Third most common cancer worldwide; effective screening programs significantly reduce mortality.",
         clinical_diagnostic_correlations=[
@@ -160,7 +168,7 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Rectal bleeding",
             "Abdominal pain",
             "Weight loss",
-            "Iron deficiency anemia",
+            "Iron deficiency anemia"
         ],
         recommendations=[
             "Colonoscopy",
@@ -173,10 +181,10 @@ oncology_differentials: Dict[str, OncologyDifferential] = {
             "Chemotherapy",
             "Radiation therapy",
             "Targeted therapy",
-            "Immunotherapy",
+            "Immunotherapy"
         ],
         recent_research="AI-driven colonoscopy and molecular diagnostics are emerging to enhance early detection.",
-        ml_insights="Advanced algorithms now assist in detecting subtle mucosal irregularities indicative of early neoplasia.",
+        ml_insights="Advanced algorithms now assist in detecting subtle mucosal irregularities indicative of early neoplasia."
     ),
 }
 
