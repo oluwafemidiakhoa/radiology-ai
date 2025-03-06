@@ -1,8 +1,9 @@
 """
-PubMed-related utility functions (Updated)
+PubMed-related utility functions for Radiology, Cardiology, and Oncology (Updated)
 
-Provides synchronous and optional asynchronous methods to fetch article references from PubMed.
-Requires the 'PUB_MED_API' key in .env or environment variables.
+Provides synchronous and optional asynchronous methods to query PubMed for references based on a
+given keyword or phrase. Adapt the queries based on the suspected pathology/modality
+(e.g., imaging for oncology, cardiology guidelines, or general radiology searches).
 """
 
 import os
@@ -17,15 +18,22 @@ logger.setLevel(logging.INFO)
 
 PUBMED_API_KEY = os.getenv("PUB_MED_API")
 if not PUBMED_API_KEY:
-    logger.warning("PUB_MED_API is not set in the environment. PubMed references may be unavailable.")
+    logger.warning("PUB_MED_API environment variable not found; PubMed fetch may be unavailable.")
 
 def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
     """
-    Synchronous function to fetch relevant PubMed articles based on a given query.
-    Returns a list of formatted references.
+    Synchronous function to fetch relevant PubMed articles based on a given query string.
+    Ideal for Radiology, Cardiology, or Oncology topics.
+
+    Args:
+        query (str): The search query (e.g. 'breast cancer screening', 'ACS guidelines', 'CT imaging protocols').
+        max_results (int): Maximum number of articles to fetch.
+
+    Returns:
+        List[str]: A list of formatted reference strings.
     """
     if not PUBMED_API_KEY:
-        return ["No PubMed API key provided."]
+        return ["No PubMed API key provided or set in environment."]
 
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
@@ -46,7 +54,7 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
         data = search_resp.json()
         ids = data.get("esearchresult", {}).get("idlist", [])
         if not ids:
-            logger.info("No relevant article IDs found for query.")
+            logger.info("No relevant article IDs found for this query.")
             return ["No relevant PubMed articles found."]
 
         summary_params = {
@@ -75,21 +83,28 @@ def fetch_pubmed_articles_sync(query: str, max_results: int = 5):
         return [f"Error retrieving PubMed references: {str(e)}"]
 
 
-# Optional Async Implementation
+# Optional asynchronous version if you prefer async in your FastAPI code:
 async def async_fetch_pubmed_articles(query: str, max_results: int = 5):
     """
-    Asynchronously fetches relevant PubMed articles based on the given query.
-    Returns a list of formatted references.
+    Asynchronously fetch relevant PubMed articles for a given query. Suitable for
+    oncology, cardiology, or radiology reference retrieval.
+
+    Args:
+        query (str): The search query (e.g. 'mammogram fibroadenoma', 'heart failure guidelines').
+        max_results (int): Maximum articles to retrieve.
+
+    Returns:
+        List[str]: A list of formatted reference strings.
     """
     if not PUBMED_API_KEY:
-        return ["No PubMed API key provided."]
+        return ["No PubMed API key provided or set in environment."]
 
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 
     async with httpx.AsyncClient() as client:
         try:
-            logger.info(f"Async searching PubMed with query: '{query}'")
+            logger.info(f"Async PubMed search with query: '{query}'")
             search_params = {
                 "db": "pubmed",
                 "term": query,
@@ -100,9 +115,10 @@ async def async_fetch_pubmed_articles(query: str, max_results: int = 5):
             search_resp = await client.get(esearch_url, params=search_params)
             search_resp.raise_for_status()
             data = search_resp.json()
+
             ids = data.get("esearchresult", {}).get("idlist", [])
             if not ids:
-                logger.info("No relevant article IDs found for query.")
+                logger.info("No relevant article IDs found for this query.")
                 return ["No relevant PubMed articles found."]
 
             summary_params = {
@@ -113,8 +129,8 @@ async def async_fetch_pubmed_articles(query: str, max_results: int = 5):
             }
             summary_resp = await client.get(esummary_url, params=summary_params)
             summary_resp.raise_for_status()
-            sum_data = summary_resp.json().get("result", {})
 
+            sum_data = summary_resp.json().get("result", {})
             references = []
             for pid in ids:
                 article = sum_data.get(pid, {})
