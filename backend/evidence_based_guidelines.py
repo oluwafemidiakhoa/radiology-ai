@@ -1,10 +1,11 @@
 """
-Evidence-based Clinical Guidelines for Medical Imaging, Cardiology, and Oncology (Updated)
+Evidence-based Clinical Guidelines for Medical Imaging, Cardiology, Oncology, and Histopathology (Updated)
 
 This module provides concise summaries of key clinical guidelines from:
 - ACR (radiology/imaging)
 - ESC (cardiology)
 - NCCN (oncology)
+- Histopathology (newly added)
 
 Guidelines for imaging have been reorganized by modality to support targeted application in an AI-driven diagnostic environment.
 Always consult the latest official guidelines for comprehensive clinical practice.
@@ -32,6 +33,30 @@ evidence_based_guidelines: Dict[str, Any] = {
             "Category 4C": "Moderate concern for malignancy - biopsy recommended.",
             "Category 5": "Highly suggestive of malignancy - prompt action required.",
             "Category 6": "Known biopsy-proven malignancy - manage appropriately."
+        }
+    },
+    # --------------------------------------------
+    # Newly added Histopathology guidelines section
+    # --------------------------------------------
+    "Histopathology": {
+        "General_Pathology": {
+            "Tissue_Processing": (
+                "Standard formalin fixation and paraffin embedding. "
+                "Follow CAP guidelines for specimen handling and labeling."
+            ),
+            "Microscopic_Evaluation": (
+                "Examine H&E-stained slides for cellular architecture, "
+                "nuclear features, and stromal changes. "
+                "Assess margins if relevant."
+            ),
+            "Immunohistochemistry": (
+                "Consider ER, PR, HER2, Ki-67, or other markers depending on suspected pathology. "
+                "Correlate with molecular or genetic tests when indicated."
+            ),
+            "Reporting_Standards": (
+                "Use standardized synoptic reporting for tumor type, grade, and stage. "
+                "Follow WHO classification and CAP protocols where applicable."
+            )
         }
     },
     # General radiology protocols applicable across modalities
@@ -165,8 +190,8 @@ def get_guideline(organization: str, guideline_type: str) -> Any:
     Retrieve the guideline data for a given organization and guideline type.
 
     Args:
-        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram").
-        guideline_type (str): The specific guideline type (e.g., "BI-RADS", "PE", "Breast_Cancer", "ACR_ChestXRay").
+        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram", "Histopathology").
+        guideline_type (str): The specific guideline type (e.g., "BI-RADS", "PE", "Breast_Cancer", "ACR_ChestXRay", "General_Pathology").
 
     Returns:
         Any: The guideline data (dictionary, list, or str) for the specified organization and type.
@@ -187,7 +212,7 @@ def list_guidelines(organization: str) -> Dict[str, Any]:
     List all guideline types for a given organization.
 
     Args:
-        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram").
+        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram", "Histopathology").
 
     Returns:
         Dict[str, Any]: A dictionary mapping each guideline type to its data.
