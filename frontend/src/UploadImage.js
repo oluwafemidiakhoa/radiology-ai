@@ -5,7 +5,24 @@ import remarkGfm from "remark-gfm";
 import { analyzeImage } from "./api";
 import { ClipLoader } from "react-spinners";
 
+/**
+ * UploadImage Component
+ *
+ * Facilitates the uploading of medical images (JPEG, PNG, or DICOM),
+ * gathers basic patient demographics (age, sex), submits data to an AI-driven
+ * backend for analysis, and renders the resulting diagnostic report.
+ *
+ * Includes:
+ *  - Drag-and-drop file handling via react-dropzone
+ *  - Classic file chooser fallback
+ *  - Inline image preview (for non-DICOM images)
+ *  - Form inputs for patient age & sex
+ *  - Asynchronous AI analysis and error handling
+ *  - Markdown rendering of the final report
+ *  - Report download as a Markdown file
+ */
 function UploadImage() {
+  // State management
   const [file, setFile] = useState(null);
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,12 +30,16 @@ function UploadImage() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
 
-  // Handle file drop using react-dropzone
+  /**
+   * onDrop callback (react-dropzone)
+   * Validates the file type (image or .dcm) and size (<= 5MB).
+   * If valid, sets local state for further processing.
+   */
   const onDrop = useCallback((acceptedFiles) => {
     const droppedFile = acceptedFiles[0];
     if (!droppedFile) return;
 
-    // Validate file type: allow image files and .dcm (DICOM)
+    // Validate file type
     if (
       !droppedFile.type.startsWith("image/") &&
       !droppedFile.name.toLowerCase().endsWith(".dcm")
@@ -27,7 +48,7 @@ function UploadImage() {
       return;
     }
 
-    // Check file size (limit to 5MB)
+    // Validate file size (up to 5MB)
     if (droppedFile.size > 5 * 1024 * 1024) {
       setError("File is too large. Please upload an image under 5MB.");
       return;
@@ -38,24 +59,33 @@ function UploadImage() {
     setReport("");
   }, []);
 
+  // Initialize react-dropzone with custom callbacks
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
   });
 
-  // Create an image preview if the file is a standard image (not DICOM)
+  /**
+   * Generate preview URL if the file is a standard image (JPEG or PNG)
+   * DICOM files won't be previewed.
+   */
   const filePreview =
     file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
 
-  // Handle the analysis process (form submission)
+  /**
+   * handleAnalysis:
+   * Validates user input, constructs a FormData object,
+   * and submits the data to the AI analysis service.
+   * Renders either a final report or an error message.
+   */
   const handleAnalysis = async () => {
-    // Validate required fields
+    // Basic validation
     if (!file) {
       setError("Please upload a medical image.");
       return;
     }
     if (!age || !sex) {
-      setError("Please provide the patient age and biological sex.");
+      setError("Please provide the patient's age and biological sex.");
       return;
     }
     const numericAge = parseInt(age, 10);
@@ -68,13 +98,14 @@ function UploadImage() {
     setError("");
     setReport("");
 
+    // Build FormData payload
     try {
-      // Build FormData and append fields
       const formData = new FormData();
       formData.append("file", file);
       formData.append("age", numericAge.toString());
       formData.append("sex", sex);
 
+      // Request AI analysis
       const data = await analyzeImage(formData);
       console.log("Backend response:", data);
 
@@ -93,7 +124,10 @@ function UploadImage() {
     }
   };
 
-  // Handle report download as a Markdown file
+  /**
+   * handleDownloadReport:
+   * Enables the user to download the AI-generated report as a .md (Markdown) file.
+   */
   const handleDownloadReport = () => {
     if (!report) {
       setError("No report available to download.");
@@ -110,7 +144,7 @@ function UploadImage() {
     URL.revokeObjectURL(url);
   };
 
-  // Simple Markdown renderer for the AI report
+  // Markdown renderer for the AI report
   const MedicalReportRenderer = ({ content }) => (
     <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
   );
@@ -122,7 +156,7 @@ function UploadImage() {
       </h1>
 
       <div className="space-y-6">
-        {/* Drag-and-Drop Zone */}
+        {/* Drag & Drop Zone */}
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
@@ -143,7 +177,7 @@ function UploadImage() {
           )}
         </div>
 
-        {/* Fallback Classic File Input */}
+        {/* Classic File Input (Fallback) */}
         <div className="flex items-center justify-center">
           <p className="mr-2 text-sm text-gray-500 dark:text-gray-400">
             Or use the classic file chooser:
@@ -160,7 +194,7 @@ function UploadImage() {
           />
         </div>
 
-        {/* Image Preview */}
+        {/* Image Preview (if applicable) */}
         {filePreview && (
           <div className="mt-4">
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">Preview:</p>
@@ -203,7 +237,7 @@ function UploadImage() {
           </div>
         </div>
 
-        {/* Analyze Button */}
+        {/* Analysis Trigger Button */}
         <button
           onClick={handleAnalysis}
           disabled={loading}
@@ -239,7 +273,7 @@ function UploadImage() {
             <div className="prose dark:prose-invert max-w-none">
               <MedicalReportRenderer content={report} />
             </div>
-            {/* Download Report Button */}
+            {/* Report Download Button */}
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handleDownloadReport}
