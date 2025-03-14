@@ -1,60 +1,68 @@
 import axios from "axios";
 
-// Define the API base URL; default to your Render deployment if not specified
+/**
+ * API base URL:
+ * Defaults to your Render deployment but falls back on the environment variable `REACT_APP_API_URL`
+ * if present in local or containerized setups.
+ */
 const API_URL = process.env.REACT_APP_API_URL || "https://radiology-ai.onrender.com";
 
 /**
- * Uploads an image (DICOM or standard format) to the backend for AI analysis.
+ * analyzeImage
  *
- * @param {FormData} formData - The FormData object containing the file and potentially other fields (e.g., age, sex).
- * @param {string} [age=null] - The patient's age (optional). If you store it in query params, pass it here.
- * @param {string} [sex=null] - The patient's sex (optional). If you store it in query params, pass it here.
- * @returns {Promise<Object>} - The JSON data from the backend, typically:
+ * Submits a medical image (DICOM or standard format) for AI-based diagnostic processing.
+ * Optionally includes patient demographics (age, sex) in query parameters for a more
+ * context-rich analysis on the backend side.
+ *
+ * @param {FormData} formData - FormData object containing the 'file' field and additional data (e.g., age, sex).
+ * @param {string|null} [age=null] - Optional patient age. If provided, appended as a query parameter.
+ * @param {string|null} [sex=null] - Optional patient sex. If provided, appended as a query parameter.
+ * @returns {Promise<Object>} - Resolves to JSON from the backend, typically:
  *   {
- *     filename: "<string>",
- *     image_metadata: { ... },
- *     analysis: "<string>"
+ *     "filename": "<string>",
+ *     "image_metadata": { ... },
+ *     "analysis": "<string>"
  *   }
- *   or
+ *   or an error object with a "detail" property in case of failures:
  *   {
- *     detail: "<string>" // error detail
+ *     "detail": "<error message>"
  *   }
  */
 export const analyzeImage = async (formData, age = null, sex = null) => {
-  // Base endpoint
-  let apiUrl = `${API_URL}/analyze-image/`;
+  // Construct the endpoint
+  let endpoint = `${API_URL}/analyze-image/`;
 
-  // Build query parameters if needed
+  // Dynamically append query parameters if age/sex are provided
   const params = new URLSearchParams();
   if (age) params.append("age", age);
   if (sex) params.append("sex", sex);
 
   const queryString = params.toString();
   if (queryString) {
-    apiUrl += `?${queryString}`;
+    endpoint += `?${queryString}`;
   }
 
   try {
-    console.log(`Uploading to endpoint: ${apiUrl}`);
+    console.log(`Uploading image to: ${endpoint}`);
 
-    // POST request with the form data
-    const response = await axios.post(apiUrl, formData, {
+    // Execute a POST request with multipart/form-data headers
+    const response = await axios.post(endpoint, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
 
     console.log("Backend response:", response.data);
-    return response.data; // e.g. { filename, image_metadata, analysis } or { detail }
+    return response.data; // Typically includes { filename, image_metadata, analysis } or { detail }
   } catch (error) {
     console.error("Error analyzing image:", error);
 
-    // If the server returned a specific error message, return it
+    // If the server responded with a specific error structure, capture it
     if (error.response && error.response.data && error.response.data.detail) {
       return { detail: error.response.data.detail };
     }
 
-    // Otherwise, return a generic fallback
+    // Fall back to a generic error message if no structured data is returned
     return {
       detail: "Image analysis failed. Please try again or contact support if the issue persists.",
     };
