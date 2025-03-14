@@ -1,17 +1,26 @@
-/** @type {import('tailwindcss').Config} */
+/** 
+ * @type {import('tailwindcss').Config} 
+ *
+ * Tailwind Configuration for Dark Mode & Extended Styles
+ * -------------------------------------------------------
+ *  - Enables dark mode via the 'class' strategy
+ *  - Monitors files under ./src/ and ./public/ for Tailwind utility usage
+ *  - Extends the default theme with custom colors, fonts, etc.
+ *  - Registers Tailwind Forms and Typography plugins for more versatile UI creation
+ */
 module.exports = {
-  darkMode: 'class', // Dark mode toggles by adding the "dark" class
+  darkMode: 'class',  // Activates dark mode by adding/removing the "dark" class
   content: [
     "./src/**/*.{js,jsx,ts,tsx,html}",
     "./public/index.html",
   ],
   theme: {
     extend: {
+      // Optionally import the entire Tailwind color palette for usage
       colors: {
-        // Optionally import full Tailwind color palette:
         ...require('tailwindcss/colors'),
 
-        // Example custom color set:
+        // Example custom color group: "diagnostic"
         diagnostic: {
           blue: {
             50: '#ebf5ff',
@@ -29,18 +38,25 @@ module.exports = {
           highlight: '#22c55e',
         },
       },
+
+      // Add custom font families beyond the defaults
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         heading: ['Poppins', 'system-ui', 'sans-serif'],
         medical: ['Lato', 'system-ui', 'sans-serif'],
       },
-      // Additional custom settings
+
+      // Additional theme extensions can go here
+      // e.g., spacing, shadows, transitions, etc.
     },
   },
   plugins: [
+    // Tailwind Forms: improved form styling with a "class" strategy
     require('@tailwindcss/forms')({
       strategy: 'class',
     }),
+
+    // Tailwind Typography: advanced text formatting (e.g., for Markdown)
     require('@tailwindcss/typography')({
       className: 'medical-prose',
     }),
