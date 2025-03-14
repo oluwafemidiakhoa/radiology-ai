@@ -2,21 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Overrides */
-
-/* Light Mode */
+/* Light Mode Defaults */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode */
+/* Dark Mode Defaults - make sure HTML has class 'dark' when active */
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
 
-/* Heading Customizations for visibility */
+/* Headings customization */
 h1, h2, h3, h4, h5, h6 {
-  @apply font-bold tracking-tight text-gray-800 dark:text-gray-100;
+  @apply font-bold tracking-tight;
 }
 
 /* Paragraphs for readability */
@@ -24,17 +22,29 @@ p {
   @apply m-0 mb-4 text-gray-700 dark:text-gray-200;
 }
 
-/* Link styling to stand out clearly in dark mode */
+/* Links: clearly distinguishable in both modes */
 a {
   @apply text-blue-600 dark:text-blue-400 hover:underline;
 }
 
-/* Responsive images */
+/* Images: fully responsive */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Buttons with transition for dark mode clarity */
+/* Buttons: clearly visible in dark mode */
 button {
-  @apply focus:outline-none transition-colors bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-600;
+  @apply focus:outline-none transition-colors;
+}
+
+/* Custom input fields and select for visibility */
+input, select, textarea {
+  @apply bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600;
+}
+
+/* Dark mode customizations to enhance visibility */
+.dark {
+  --tw-bg-opacity: 1;
+  background-color: rgb(17 24 39 / var(--tw-bg-opacity)); /* Tailwind's gray-900 */
+  color: rgb(229 231 235); /* Tailwind's gray-200 for excellent readability */
 }
