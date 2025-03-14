@@ -1,33 +1,19 @@
-"""
-Advanced Cardiology Differential Diagnosis Module
-
-This module defines a structured representation of cardiology differential diagnoses using Python dataclasses.
-It encapsulates detailed diagnostic criteria, imaging features, risk factors, epidemiology, clinical correlations,
-recommendations, recent research findings, and machine learning insights for key cardiac conditions.
-The module supports both top-level conditions and nested conditions (e.g., arrhythmias) for flexible usage.
-
-Usage Example:
-    from cardiology_differentials import get_cardiology_differential, list_cardiology_differentials
-
-    # Retrieve a top-level differential:
-    mi_diff = get_cardiology_differential("Myocardial Infarction (MI)")
-    print(mi_diff.formatted_summary())
-
-    # Retrieve a nested differential:
-    af_diff = get_cardiology_differential("Arrhythmia", "Atrial Fibrillation (AF)")
-    print(af_diff.formatted_summary())
-    
-    # List all differentials:
-    all_diffs = list_cardiology_differentials()
-    for condition, diff in all_diffs.items():
-        print(condition)
-"""
-
 from dataclasses import dataclass, asdict, field
 from typing import List, Dict, Union, Optional
 
 @dataclass
 class CardiologyDifferential:
+    """
+    Represents the comprehensive diagnostic profile for a specific cardiac condition or subcondition.
+    Each instance consolidates:
+      - Imaging attributes (e.g., MRI, ultrasound, CT findings)
+      - Known risk factors
+      - Epidemiological context
+      - Clinical correlations
+      - Practice recommendations
+      - Recent research highlights
+      - Machine learning (ML) insights
+    """
     imaging_descriptors: List[str] = field(default_factory=list)
     risk_factors: List[str] = field(default_factory=list)
     epidemiology: str = ""
@@ -37,13 +23,17 @@ class CardiologyDifferential:
     ml_insights: str = ""
 
     def to_dict(self) -> Dict:
-        """Convert the differential entry into a dictionary."""
+        """
+        Converts this CardiologyDifferential instance into a dictionary, 
+        offering easy serialization for web APIs or data pipelines.
+        """
         return asdict(self)
 
     def formatted_summary(self) -> str:
         """
-        Returns a formatted multi-line summary of the differential diagnosis.
-        Fields that are empty will be omitted from the summary.
+        Produces a multi-line string summarizing the differential diagnosis, 
+        omitting any sections that are not populated. Suited for quick display 
+        in CLI tools, UI dashboards, or PDF reports.
         """
         parts = []
         if self.imaging_descriptors:
@@ -53,7 +43,8 @@ class CardiologyDifferential:
         if self.epidemiology:
             parts.append(f"Epidemiology:\n  {self.epidemiology}")
         if self.clinical_diagnostic_correlations:
-            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+            parts.append("Clinical Diagnostic Correlations:\n  - " 
+                         + "\n  - ".join(self.clinical_diagnostic_correlations))
         if self.recommendations:
             parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
         if self.recent_research:
@@ -63,7 +54,8 @@ class CardiologyDifferential:
         return "\n\n".join(parts)
 
 
-# Define the cardiology differentials (top-level and nested) in a dictionary.
+# Master Dictionary for Cardiology Differentials
+# Supports both top-level and nested cardiac conditions (e.g., arrhythmias).
 cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]] = {
     "Myocardial Infarction (MI)": CardiologyDifferential(
         imaging_descriptors=[
@@ -82,29 +74,38 @@ cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, Card
             "Obesity",
             "Sedentary lifestyle"
         ],
-        epidemiology="A leading cause of morbidity and mortality worldwide; early detection is critical for improving outcomes.",
+        epidemiology=(
+            "A leading global cause of morbidity and mortality; "
+            "early detection markedly improves survival and outcomes."
+        ),
         clinical_diagnostic_correlations=[
-            "Chest pain",
+            "Chest pain or pressure",
             "Shortness of breath",
             "Diaphoresis",
-            "Nausea",
-            "ECG changes (ST-segment elevation/depression, T-wave inversion)",
-            "Elevated cardiac biomarkers (troponin)",
-            "Killip classification for risk stratification"
+            "Nausea or vomiting",
+            "ECG abnormalities (ST-segment elevation, T-wave inversion)",
+            "Elevated troponin or other cardiac biomarkers",
+            "Risk stratification via Killip classification"
         ],
         recommendations=[
-            "Immediate ECG",
-            "Cardiac biomarkers assessment",
-            "Coronary angiography",
-            "Percutaneous coronary intervention (PCI)",
-            "Thrombolytic therapy if PCI is unavailable",
-            "Dual antiplatelet therapy",
-            "Beta-blockers, ACE inhibitors, and statins",
-            "Oxygen supplementation",
+            "Immediate 12-lead ECG",
+            "Serial measurement of cardiac biomarkers",
+            "Urgent coronary angiography (within appropriate time window)",
+            "Percutaneous coronary intervention (PCI) if feasible",
+            "Thrombolytic therapy if PCI is not available in time",
+            "Dual antiplatelet therapy (aspirin + P2Y12 inhibitor)",
+            "Beta-blockers, ACE inhibitors, statins",
+            "Supplemental oxygen if hypoxic",
             "Consider cardiac MRI for viability assessment"
         ],
-        recent_research="Emerging imaging biomarkers and AI-driven analysis are enhancing early MI detection and risk stratification.",
-        ml_insights="Hybrid deep learning models predict infarct size and potential recovery with high accuracy."
+        recent_research=(
+            "Cutting-edge imaging biomarkers and AI-based risk calculators are refining "
+            "predictive accuracy and personalizing therapeutic decisions."
+        ),
+        ml_insights=(
+            "Deep learning networks can forecast infarct size and assist in lesion "
+            "classification, enhancing clinical triage."
+        )
     ),
     "Heart Failure": CardiologyDifferential(
         imaging_descriptors=[
@@ -126,35 +127,43 @@ cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, Card
             "Alcohol abuse",
             "Family history"
         ],
-        epidemiology="Increasing prevalence among aging populations with significant morbidity.",
+        epidemiology=(
+            "Prevalence is rising with aging populations, significantly burdening global "
+            "health systems. Multi-disciplinary management is crucial."
+        ),
         clinical_diagnostic_correlations=[
-            "Dyspnea on exertion",
-            "Fatigue",
+            "Dyspnea (especially on exertion)",
+            "Fatigue and reduced exercise tolerance",
             "Peripheral edema",
-            "Orthopnea",
-            "Paroxysmal nocturnal dyspnea",
-            "Elevated BNP or NT-proBNP"
+            "Orthopnea or paroxysmal nocturnal dyspnea",
+            "Elevated BNP or NT-proBNP levels"
         ],
         recommendations=[
-            "Echocardiogram for structural and functional assessment",
-            "ECG and chest X-ray",
-            "BNP/NT-proBNP measurement",
-            "Pharmacologic management (ACE inhibitors/ARBs, beta-blockers, diuretics)",
-            "Aldosterone antagonists and digoxin in select cases",
-            "SGLT2 inhibitors",
-            "Cardiac MRI for detailed tissue characterization"
+            "Echocardiography for structural/functional assessment",
+            "Baseline ECG and chest X-ray",
+            "BNP/NT-proBNP for diagnostic and prognostic purposes",
+            "Neurohormonal blockade (ACE inhibitors/ARBs, beta-blockers, MRA)",
+            "Diuretics for volume management",
+            "SGLT2 inhibitors for HF with reduced EF",
+            "Cardiac MRI when further tissue characterization is indicated"
         ],
-        recent_research="Recent clinical trials support SGLT2 inhibitors in heart failure irrespective of diabetic status.",
-        ml_insights="Predictive analytics using multi-modal imaging data now forecast heart failure progression."
+        recent_research=(
+            "Landmark trials endorse SGLT2 inhibitors in heart failure, reducing hospitalizations "
+            "and improving quality of life even in non-diabetics."
+        ),
+        ml_insights=(
+            "Predictive analytics using echocardiograms, labs, and wearable data can forecast "
+            "acute decompensation, facilitating preventive interventions."
+        )
     ),
     "Arrhythmia": {
         "Atrial Fibrillation (AF)": CardiologyDifferential(
             imaging_descriptors=[
-                "Absence of P waves",
+                "Absent P waves on ECG",
                 "Irregularly irregular rhythm"
             ],
             risk_factors=[
-                "Age",
+                "Advancing age",
                 "Hypertension",
                 "Coronary artery disease",
                 "Valvular heart disease",
@@ -162,66 +171,78 @@ cardiology_differentials: Dict[str, Union[CardiologyDifferential, Dict[str, Card
                 "Hyperthyroidism",
                 "Alcohol abuse",
                 "Obesity",
-                "Sleep apnea"
+                "Obstructive sleep apnea"
             ],
-            epidemiology="The most common sustained arrhythmia; significant risk for stroke.",
+            epidemiology=(
+                "Atrial fibrillation ranks as the most common sustained arrhythmia worldwide, "
+                "substantially elevating stroke risk."
+            ),
             clinical_diagnostic_correlations=[
-                "Palpitations",
-                "Shortness of breath",
-                "Fatigue",
-                "Dizziness",
+                "Palpitations and irregular pulse",
+                "Dyspnea or reduced exercise capacity",
+                "Fatigue and lightheadedness",
                 "Chest discomfort",
-                "Thromboembolic events"
+                "Increased risk of systemic thromboembolism"
             ],
             recommendations=[
-                "ECG for initial detection",
-                "24-hour Holter monitoring",
-                "Event recorder monitoring",
-                "Anticoagulation therapy",
-                "Rate control with beta-blockers or calcium channel blockers",
-                "Rhythm control strategies (medications, cardioversion, ablation)",
-                "Consider left atrial appendage closure in selected patients"
+                "ECG confirmation with standard or extended monitoring",
+                "Risk stratification for stroke (CHA₂DS₂-VASc score)",
+                "Anticoagulation therapy (NOACs or warfarin)",
+                "Rate control (beta-blockers, non-dihydropyridine CCBs) vs. rhythm control",
+                "Elective cardioversion or AF ablation if indicated",
+                "Consider left atrial appendage closure for select patients"
             ],
-            recent_research="Emerging wearable ECG devices and AI algorithms are enhancing early AF detection.",
-            ml_insights="Recent studies show AI can predict the onset of AF from subtle ECG variations."
+            recent_research=(
+                "Innovative wearable ECG devices and AI-driven signal analysis detect subclinical AF, "
+                "potentially preventing strokes through earlier intervention."
+            ),
+            ml_insights=(
+                "Machine learning models can identify subtle ECG changes preceding AF onset, "
+                "informing timely prophylactic care."
+            )
         )
     }
 }
 
 def get_cardiology_differential(condition: str, subcondition: Optional[str] = None) -> CardiologyDifferential:
     """
-    Retrieve the cardiology differential for a given condition.
+    Fetches a specific cardiology differential based on the given 'condition' name.
+    Optionally looks up a 'subcondition' within nested dictionaries (e.g., 'Atrial Fibrillation (AF)' under 'Arrhythmia').
 
-    Args:
-        condition (str): The top-level condition (e.g., "Myocardial Infarction (MI)", "Arrhythmia").
-        subcondition (Optional[str]): For nested conditions (e.g., "Atrial Fibrillation (AF)" under "Arrhythmia").
+    **Example Usage**:
+        >>> diff = get_cardiology_differential("Myocardial Infarction (MI)")
+        >>> print(diff.formatted_summary())
 
-    Returns:
-        CardiologyDifferential: The differential diagnosis data for the specified condition.
+        >>> sub_diff = get_cardiology_differential("Arrhythmia", "Atrial Fibrillation (AF)")
+        >>> print(sub_diff.formatted_summary())
 
     Raises:
-        KeyError: If the specified condition or subcondition is not available.
+        KeyError: If the requested condition or subcondition does not exist.
     """
     if subcondition is None:
         differential = cardiology_differentials.get(condition)
-        if differential is None or not isinstance(differential, CardiologyDifferential):
-            raise KeyError(f"No cardiology differential found for '{condition}'.")
+        if not isinstance(differential, CardiologyDifferential):
+            raise KeyError(f"No differential found for '{condition}'. Check available conditions.")
         return differential
     else:
-        nested = cardiology_differentials.get(condition)
-        if nested is None or not isinstance(nested, dict):
-            raise KeyError(f"No nested cardiology differential found for category '{condition}'.")
-        differential = nested.get(subcondition)
-        if differential is None:
-            raise KeyError(f"No cardiology differential found for '{subcondition}' in category '{condition}'.")
+        nested_block = cardiology_differentials.get(condition)
+        if not isinstance(nested_block, dict):
+            raise KeyError(f"No nested conditions available for '{condition}'.")
+        differential = nested_block.get(subcondition)
+        if not differential:
+            raise KeyError(f"Subcondition '{subcondition}' does not exist under '{condition}'.")
         return differential
 
 def list_cardiology_differentials() -> Dict[str, Union[CardiologyDifferential, Dict[str, CardiologyDifferential]]]:
     """
-    List all available cardiology differentials.
+    Provides a dictionary of all top-level cardiology conditions, potentially containing
+    nested conditions (e.g., Arrhythmia -> Atrial Fibrillation). Useful for auto-generating
+    navigable UIs or enumerating available differentials in APIs.
 
-    Returns:
-        A dictionary mapping condition names (or categories) to their differential data.
+    **Example Usage**:
+        >>> diffs = list_cardiology_differentials()
+        >>> for name, diff in diffs.items():
+        ...     print(name)
     """
-    # Return a shallow copy to prevent accidental mutation.
+    # Returns a shallow copy to prevent external mutation
     return cardiology_differentials.copy()
