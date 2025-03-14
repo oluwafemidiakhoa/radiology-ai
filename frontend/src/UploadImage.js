@@ -14,7 +14,7 @@ function UploadImage() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
 
-  // Handle file drop (Drag & Drop)
+  // Handle File Upload (Drag & Drop)
   const onDrop = useCallback((acceptedFiles) => {
     const droppedFile = acceptedFiles[0];
     if (!droppedFile) return;
@@ -110,14 +110,16 @@ function UploadImage() {
     URL.revokeObjectURL(url);
   };
 
-  // Markdown Renderer for AI Report
+  // Markdown Renderer for AI Report (Styled for Dark Mode)
   const MedicalReportRenderer = ({ content }) => (
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose dark:prose-invert">
+      {content}
+    </ReactMarkdown>
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-md">
-      <h1 className="text-3xl font-bold text-center mb-8 text-blue-600 dark:text-blue-400">
+    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-xl shadow-md">
+      <h1 className="text-3xl font-bold text-center mb-8 text-blue-600 dark:text-blue-300">
         🏥 AI-Powered Medical Imaging Analysis
       </h1>
 
@@ -201,8 +203,8 @@ function UploadImage() {
 
         {/* AI Report Section */}
         {report && (
-          <div className="mt-8 p-6 bg-gray-50 rounded-xl">
-            <h2 className="text-2xl font-bold mb-4">📑 AI Diagnostic Report</h2>
+          <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-xl shadow-md">
+            <h2 className="text-2xl font-bold mb-4 text-blue-600 dark:text-blue-300">📑 AI Diagnostic Report</h2>
             <MedicalReportRenderer content={report} />
             <button onClick={handleDownloadReport} className="mt-4 bg-green-600 text-white px-6 py-2 rounded-md">
               ⬇ Download Report (MD)
