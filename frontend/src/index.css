@@ -1,23 +1,13 @@
-/* --------------------------------
-   Tailwind CSS Base, Components, and Utilities
------------------------------------ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 
-Global Overrides
----------------
-These overrides manage default colors, typography, 
-and spacing for both light mode and dark mode.
-*/
-
-/* Light Mode Defaults */
+/* Global Overrides */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode Defaults (via .dark class on <html> or parent element) */
+/* Dark Mode Global Styles */
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
@@ -32,17 +22,18 @@ p {
   @apply m-0 mb-4;
 }
 
-/* Consistent Link Styling (light and dark) */
+/* Consistent Link Styling */
 a {
   @apply text-blue-600 hover:underline;
 }
 
-/* Ensure images scale correctly */
+/* Additional Utility Examples */
+/* Ensure images are responsive */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Buttons: remove outline on focus and enable smooth color transitions */
+/* Standardize button styling */
 button {
   @apply focus:outline-none transition-colors;
 }
