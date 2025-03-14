@@ -42,7 +42,7 @@ if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
 
 # Import the consolidated differentials and guidelines
 try:
-    from medical_differentials import medical_differentials
+    from differentials import medical_differentials
 except ImportError as e:
     logging.error(f"Error importing 'medical_differentials': {e}")
     medical_differentials = {}
