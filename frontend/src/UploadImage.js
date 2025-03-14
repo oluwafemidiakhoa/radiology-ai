@@ -43,11 +43,10 @@ function UploadImage() {
     multiple: false,
   });
 
-  // Create an image preview if the file is a standard image (not DICOM)
   const filePreview =
     file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
 
-  // Handle the analysis process (form submission)
+  // Handle the analysis process
   const handleAnalysis = async () => {
     if (!file) {
       setError("Please upload a medical image.");
@@ -68,7 +67,6 @@ function UploadImage() {
     setReport("");
 
     try {
-      // Build FormData and append fields
       const formData = new FormData();
       formData.append("file", file);
       formData.append("age", numericAge.toString());
@@ -84,7 +82,6 @@ function UploadImage() {
         setError("No analysis text was returned from the server.");
       }
     } catch (err) {
-      console.error("Medical image analysis failed:", err);
       setError("Image analysis failed. Please try again.");
     } finally {
       setLoading(false);
@@ -130,18 +127,6 @@ function UploadImage() {
           </p>
         </div>
 
-        {/* Image Preview */}
-        {filePreview && (
-          <div className="mt-4">
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">Preview:</p>
-            <img
-              src={filePreview}
-              alt="Uploaded Preview"
-              className="max-w-sm rounded border border-gray-200 dark:border-gray-700"
-            />
-          </div>
-        )}
-
         {/* Patient Demographics */}
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
@@ -173,7 +158,7 @@ function UploadImage() {
           </div>
         </div>
 
-        {/* Analyze Button */}
+        {/* Generate Report Button - Always Visible */}
         <button
           onClick={handleAnalysis}
           disabled={loading}
@@ -192,9 +177,12 @@ function UploadImage() {
         {/* AI Report Display */}
         {report && (
           <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">AI Diagnostic Report</h2>
+            <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">📑 AI Diagnostic Report</h2>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
-            <button onClick={handleDownloadReport} className="mt-4 px-6 py-2 bg-green-600 text-white rounded-md">
+            <button
+              onClick={handleDownloadReport}
+              className="mt-4 px-6 py-2 bg-green-600 text-white rounded-md"
+            >
               Download Report (MD)
             </button>
           </div>
