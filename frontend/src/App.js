@@ -3,26 +3,26 @@ import UploadImage from "./UploadImage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Heroicons v1 imports (ensures consistent icon styling)
+// Heroicons v1 (consistent icon set)
 import { UploadIcon, CheckCircleIcon, ExclamationIcon } from "@heroicons/react/solid";
 
 /**
  * App Component
  *
- * Manages the entire application layout and global state (e.g., dark mode).
- * Includes:
- *  - A persistent dark mode toggle
- *  - A sticky navigation bar with anchor links
- *  - A hero section showcasing the AI offering
- *  - Section for multi-step image upload & analysis
- *  - Advanced disclaimers & feature highlights
- *  - Footer & scroll-to-top utilities
- *  - Toast notifications
+ * Provides a container for the entire medical imaging AI application:
+ *  - Persistent dark mode toggle with localStorage to save user preference
+ *  - A sticky navigation bar (with anchor links for "Upload", "Analysis", "About")
+ *  - A hero section introducing the AI service
+ *  - A multi-step wizard (Step 1: Upload, Step 2: Analyze, Step 3: Results)
+ *  - Advanced features and disclaimers
+ *  - Footer with essential links and mission statement
+ *  - Smooth scroll-to-top utility button
+ *  - Toast notifications for user feedback
  */
 function App() {
   /**
-   * Dark mode preference is loaded from localStorage (if set),
-   * ensuring user choice persists across sessions.
+   * Load dark mode preference from localStorage (if it exists), ensuring
+   * the user's choice persists across sessions.
    */
   const [darkMode, setDarkMode] = useState(() => {
     const storedPref = localStorage.getItem("darkMode");
@@ -30,7 +30,8 @@ function App() {
   });
 
   /**
-   * Toggles dark vs. light mode, storing the preference in localStorage.
+   * toggleDarkMode:
+   * Toggles dark vs. light mode and saves the updated preference in localStorage.
    */
   const toggleDarkMode = () => {
     setDarkMode((prevMode) => {
@@ -40,15 +41,16 @@ function App() {
   };
 
   /**
-   * Smooth scrolls the viewport back to the top of the page.
+   * scrollToTop:
+   * Smoothly scrolls the page to the top (used by the floating ↑ button).
    */
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   /**
-   * Whenever darkMode changes, apply or remove the "dark" class on
-   * the root HTML element, allowing for Tailwind-based theming.
+   * Apply or remove the "dark" class on <html> whenever darkMode changes.
+   * This allows Tailwind CSS to render dark-mode styles appropriately.
    */
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -60,17 +62,30 @@ function App() {
       <nav className="sticky top-0 z-50 bg-blue-600 dark:bg-gray-800 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="text-white font-bold text-xl">Medical Images AI</div>
+
+          {/* Nav Links */}
           <div className="flex space-x-6">
-            <a href="#upload" className="text-white hover:underline transition-colors">
+            <a
+              href="#upload"
+              className="text-white hover:underline transition-colors"
+            >
               Upload
             </a>
-            <a href="#analysis" className="text-white hover:underline transition-colors">
+            <a
+              href="#analysis"
+              className="text-white hover:underline transition-colors"
+            >
               Analysis
             </a>
-            <a href="#about" className="text-white hover:underline transition-colors">
+            <a
+              href="#about"
+              className="text-white hover:underline transition-colors"
+            >
               About
             </a>
           </div>
+
+          {/* Dark Mode Toggle */}
           <button
             onClick={toggleDarkMode}
             className="px-3 py-1 bg-white text-blue-800 rounded-md shadow hover:bg-blue-100 transition-colors"
@@ -80,9 +95,9 @@ function App() {
         </div>
       </nav>
 
-      {/* Hero Section with Background and CTA */}
+      {/* Hero Section with Gradient & CTA */}
       <header className="relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 dark:from-gray-800 dark:to-gray-900 text-white shadow-md">
-        {/* Background Pattern Overlay */}
+        {/* Faint Background Pattern */}
         <div
           style={{
             backgroundImage: `url(${process.env.PUBLIC_URL}/assets/pattern.svg)`,
@@ -106,7 +121,7 @@ function App() {
             />
           </div>
 
-          {/* Primary Call-to-Action */}
+          {/* Primary CTA Button */}
           <a
             href="#upload"
             className="inline-block mt-6 px-8 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:shadow-lg hover:bg-blue-50 hover:scale-105 transform transition-all"
@@ -122,17 +137,16 @@ function App() {
           How It Works
         </h2>
         <p className="text-center text-gray-700 dark:text-gray-300">
-          Our innovative platform lets you upload a medical image, which is then analyzed by advanced AI algorithms.
-          The system generates an evidence-based diagnostic report enriched with real-time PubMed references and clinical guidelines.
+          Our innovative platform lets you upload a medical image, which is then
+          analyzed by advanced AI algorithms. The system generates an
+          evidence-based diagnostic report enriched with real-time PubMed
+          references and clinical guidelines.
         </p>
       </section>
 
-      {/* Multi-Step Wizard Section */}
-      <main
-        id="upload"
-        className="flex-1 w-full max-w-6xl mx-auto px-4 mt-8 mb-8"
-      >
-        {/* Wizard Progress Indicators */}
+      {/* Main Content: Multi-Step Wizard */}
+      <main id="upload" className="flex-1 w-full max-w-6xl mx-auto px-4 mt-8 mb-8">
+        {/* Step Indicators */}
         <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4 mb-8">
           <div className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow ring-2 ring-blue-300 hover:scale-105 transform transition-transform">
             <UploadIcon className="h-4 w-4" />
@@ -148,7 +162,7 @@ function App() {
           </div>
         </div>
 
-        {/* File Upload & Analysis Component */}
+        {/* Upload & Analysis Panel */}
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mx-auto hover:shadow-lg transition-shadow duration-200 mt-4 md:mt-6">
           <UploadImage />
         </section>
@@ -157,12 +171,14 @@ function App() {
       {/* Advanced Features Section */}
       <section className="max-w-6xl mx-auto px-4 py-8">
         <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400 text-center mb-4">
-          Advanced Features & Innovation
+          Advanced Features &amp; Innovation
         </h2>
         <p className="text-center text-gray-700 dark:text-gray-300">
-          Our platform leverages cutting-edge AI technology to generate comprehensive, evidence-based diagnostic reports.
-          Real-time integration with PubMed ensures that findings are backed by the latest research. Explore dynamic analysis,
-          differential diagnosis integration, and seamless report downloads.
+          Our platform leverages cutting-edge AI to generate comprehensive,
+          evidence-based diagnostic reports. Real-time integration with PubMed
+          ensures that findings are backed by the latest research. Explore
+          dynamic analysis, differential diagnosis integration, and seamless
+          report downloads.
         </p>
       </section>
 
@@ -170,11 +186,14 @@ function App() {
       <section className="mt-8 p-4 bg-yellow-100 dark:bg-yellow-200 border-l-4 border-yellow-400 rounded-md text-yellow-800 dark:text-yellow-900 flex items-start space-x-2">
         <ExclamationIcon className="h-5 w-5 mt-1 text-yellow-700 dark:text-yellow-800" />
         <p className="text-sm leading-relaxed">
-          <strong>Disclaimer:</strong> This AI tool is designed to assist in medical imaging analysis, but it does <em>not</em> replace the expertise of a certified medical professional. Always consult a qualified practitioner for final interpretations and decisions.
+          <strong>Disclaimer:</strong> This AI tool is designed to assist in
+          medical imaging analysis, but it does <em>not</em> replace the
+          expertise of a certified medical professional. Always consult a
+          qualified practitioner for final interpretations and decisions.
         </p>
       </section>
 
-      {/* Application Footer */}
+      {/* Footer */}
       <footer className="w-full py-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-500 dark:text-gray-400 text-sm">
           <p>&copy; 2025 Medical Images AI. All rights reserved.</p>
@@ -194,12 +213,13 @@ function App() {
             </a>
           </p>
           <p className="mt-2 text-xs">
-            Our mission is to empower clinicians with advanced, evidence-based diagnostic support tools.
+            Our mission is to empower clinicians with advanced, evidence-based
+            diagnostic support tools.
           </p>
         </div>
       </footer>
 
-      {/* Toast Notifications Container */}
+      {/* Toast Notifications */}
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
@@ -211,7 +231,7 @@ function App() {
         pauseOnHover
       />
 
-      {/* Scroll-to-Top Floating Button */}
+      {/* Scroll to Top Button */}
       <button
         onClick={scrollToTop}
         className="fixed bottom-8 right-8 bg-blue-600 text-white p-3 rounded-full shadow hover:scale-105 transition-transform"
