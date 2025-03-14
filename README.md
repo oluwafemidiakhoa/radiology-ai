@@ -1,118 +1,148 @@
 🩻 Radiology AI - AI-Powered Medical Imaging Analysis
 
 🚀 Overview
-Radiology AI is an advanced AI-powered medical imaging platform integrating OpenAI’s GPT-4 Vision (GPT-4V), Deep Learning (CNNs), and Evidence-Based Guidelines to assist radiologists in diagnosing medical conditions from X-ray, CT, MRI, and DICOM images.
+Radiology AI is an advanced AI-driven medical imaging platform that utilizes GPT-4 Vision (GPT-4V) and deep learning models to analyze X-ray, CT, MRI, and DICOM images. It provides structured diagnostic reports, differential diagnoses, and real-time clinical guidelines (ACR, NCCN, ESC).
 
-Leveraging OpenAI’s Multimodal AI, the system can: ✔️ Analyze medical images with GPT-4 Vision
-✔️ Interpret X-ray, CT, MRI, and DICOM formats
-✔️ Generate structured AI reports using LLM + vision models
-✔️ Provide real-time clinical guidelines & PubMed research
-✔️ Offer differential diagnosis support (Radiology, Cardiology, Oncology)
+✨ Key Features
+✔️ AI-powered image analysis (X-ray, CT, MRI, DICOM)
+✔️ GPT-4V for multimodal reasoning on medical scans
+✔️ Structured reports with differential diagnosis
+✔️ MongoDB-powered database for scalable storage
+✔️ Cloudflare CDN + Render.com hosting for seamless performance
+✔️ PubMed integration for real-time medical research
 
 🔗 Live Deployment: RadVisionAI.com
 📂 GitHub Repository: GitHub - Radiology AI
 
-🌟 Features
-📸 AI-Powered Image Analysis: Upload X-ray, CT, MRI, or DICOM images for AI-assisted diagnosis using GPT-4V multimodal processing.
-📑 Structured AI Diagnostic Reports: Provides bolded, structured diagnostic reports with risk factors, clinical correlations, and recommendations.
-🧠 Multimodal AI Insights: Combines vision-based analysis (image recognition) + natural language processing (GPT-4) for enhanced reporting.
-🔬 PubMed & Evidence-Based Guidelines: Retrieves the latest clinical research, ACR, NCCN, and ESC guidelines for decision support.
-🩺 Differential Diagnosis Support: AI-assisted differential diagnosis covering Radiology, Cardiology, Oncology, and Histopathology.
-🎨 Optimized UI/UX: Dark mode, accessibility, and real-time report visualization.
-📡 Cloud-Enabled & Scalable: Deployable on AWS, GCP, Azure, or on-premises environments.
 🛠️ Tech Stack
 Technology	Usage
 React.js + Tailwind CSS	Frontend UI/UX
 FastAPI + Python	AI model backend
-OpenAI GPT-4 Vision (GPT-4V)	Multimodal image & text analysis
+OpenAI GPT-4 Vision (GPT-4V)	Multimodal AI (Image & Text Analysis)
 PyTorch/TensorFlow	Deep Learning (CNN-based medical models)
-MongoDB/PostgreSQL	Database for reports & patient data
+MongoDB (Atlas / Render)	NoSQL Database for image metadata & logs
 DICOMWeb + MONAI	Medical Imaging Processing
-Docker & Kubernetes	Cloud scalability
-NGINX	Reverse Proxy
-💻 Installation Guide
-1️⃣ Clone the Repository
+Render.com	Backend & frontend hosting
+Cloudflare	Security, caching, CDN
+📦 MongoDB Database Setup
+1️⃣ MongoDB Atlas (Recommended)
+MongoDB Atlas is a fully managed cloud database.
+
+Create a free MongoDB cluster on MongoDB Atlas
+Click "Connect" → "Connect Your Application"
+Copy the connection string:
+pgsql
+Copy
+Edit
+mongodb+srv://<username>:<password>@cluster.mongodb.net/radiology_ai?retryWrites=true&w=majority
+Add this to your .env file:
 bash
 Copy
 Edit
-git clone https://github.com/oluwafemidiakhoa/radiology-ai.git
-cd radiology-ai
-2️⃣ Backend Setup
-Install dependencies:
+MONGO_URI="mongodb+srv://<username>:<password>@cluster.mongodb.net/radiology_ai?retryWrites=true&w=majority"
+2️⃣ Deploy MongoDB on Render.com
+If you want to use MongoDB on Render, follow these steps:
+
+Go to Render.com
+Click "New Database" → Select MongoDB
+Set Storage Size (e.g., 1GB free tier)
+Copy the MongoDB connection string from Render
+Add it to your .env file:
 bash
 Copy
 Edit
-cd backend
+MONGO_URI="your-render-mongo-url"
+3️⃣ Local MongoDB Setup
+If you want to run MongoDB locally, install it via:
+
+bash
+Copy
+Edit
+brew install mongodb-community@6.0  # MacOS
+sudo apt install mongodb            # Ubuntu
+choco install mongodb                # Windows
+Start MongoDB locally:
+
+bash
+Copy
+Edit
+mongod --dbpath ./data/db
+Then, set the connection string in .env:
+
+bash
+Copy
+Edit
+MONGO_URI="mongodb://localhost:27017/radiology_ai"
+✅ Your MongoDB setup is complete!
+
+📡 Deploying on Render.com
+🚀 Render.com provides automatic deployment with scalable infrastructure.
+
+1️⃣ Deploy Backend (FastAPI + MongoDB)
+Go to Render Dashboard
+Click New Web Service → Connect to GitHub Repo
+Select backend directory → Choose Python Environment
+Set environment variables:
+bash
+Copy
+Edit
+OPENAI_API_KEY="your_openai_api_key"
+MONGO_URI="your_mongo_url"
+Build Command:
+bash
+Copy
+Edit
 pip install -r requirements.txt
-Start FastAPI backend:
+Start Command:
 bash
 Copy
 Edit
-uvicorn main:app --reload
-API will be available at: http://127.0.0.1:8000
+uvicorn main:app --host 0.0.0.0 --port 10000
+Click Deploy.
+✅ Your API is now live on Render!
 
-3️⃣ Frontend Setup
-Install dependencies:
+2️⃣ Deploy Frontend (React)
+Go to New Static Site → Connect to GitHub Repo.
+Set build command:
 bash
 Copy
 Edit
-cd frontend
-npm install
-Start React App:
+npm install && npm run build
+Set publish directory:
 bash
 Copy
 Edit
-npm run dev
-Frontend will be available at: http://localhost:3000
+dist
+Click Deploy.
+✅ Your frontend is now live!
 
-4️⃣ OpenAI API Key Setup
-To enable GPT-4 Vision (Multimodal AI) for medical image analysis, set your OpenAI API key in a .env file:
-
-bash
-Copy
-Edit
-OPENAI_API_KEY="your_openai_api_key_here"
-⚠️ Ensure you have GPT-4V (Vision) access enabled.
-
-🔍 Usage
-📥 Upload Medical Images
-Drag and drop X-ray, CT, MRI, or DICOM images.
-AI scans for abnormalities using GPT-4 Vision and deep learning.
-Structured reports are generated, including:
-Confidence scores
-Key findings & risk factors
-Pattern recognition & differential diagnoses
-Clinical recommendations
-📑 AI-Generated Structured Report
-✔️ GPT-4 Vision interprets images
-✔️ GPT-4 generates structured reports
-✔️ ACR/NCCN/ESC Guidelines for clinical recommendations
-✔️ PubMed references for latest research
+🌍 Configuring Cloudflare for Performance & Security
+1️⃣ Enable Cloudflare Proxy (CDN)
+Go to Cloudflare Dashboard → Select your domain.
+Under DNS, enable Proxy (Orange Cloud ☁️) for backend/frontend.
+2️⃣ Secure API with Firewall Rules
+Under Security → WAF, create rules:
+Block requests not from your frontend domain.
+Rate-limit requests to prevent API abuse.
+3️⃣ Enable Automatic HTTPS & DDoS Protection
+Go to SSL/TLS → Set to Full (Strict) mode.
+Enable Cloudflare Bot Protection.
+✅ Your AI-powered medical imaging platform is now secured & optimized!
 
 📡 REST API Integration
-Radiology AI provides an API for external integrations.
-📌 Swagger API Docs: http://127.0.0.1:8000/docs
-
-Example API Call: Analyze Medical Image
+Example: Analyze Medical Image
 python
 Copy
 Edit
 import requests
 
-url = "http://127.0.0.1:8000/analyze"
+url = "https://your-api-url.onrender.com/analyze"
 files = {'file': open('chest_xray.png', 'rb')}
 headers = {"Authorization": "Bearer your_openai_api_key"}
 response = requests.post(url, files=files, headers=headers)
 
 print(response.json())
-🔬 AI Models Used
-Model	Purpose
-GPT-4 Vision (GPT-4V)	Image-based medical interpretation & structured reporting
-ResNet-50, EfficientNet	X-ray & CT classification
-YOLOv5 + UNet	Lesion & abnormality detection
-BERT (Medical NLP)	Medical research summarization
-DICOM Processing (MONAI, Pydicom)	Advanced imaging analysis
-📜 Example AI-Generated Report (GPT-4V)
+📜 Example AI-Generated Report
 markdown
 Copy
 Edit
@@ -132,9 +162,8 @@ Edit
 - **Differential Diagnosis**: Viral pneumonia (80%), Atypical infection (70%).
 
 📌 **Recommendations**
-- **Follow-up with Chest CT** (High-resolution imaging suggested)
-- **Clinical correlation needed**: Symptoms (fever, dyspnea, sputum culture)
-- **Empirical antibiotics may be considered** based on severity.
+- **Follow-up with Chest CT**
+- **Empirical antibiotics based on severity**
 
 📚 **PubMed References**
 1️⃣ AI-assisted pneumonia detection (2025, Radiology)
@@ -142,10 +171,10 @@ Edit
 
 🔍 **AI-generated analysis – Must be validated by a board-certified radiologist.**
 📈 Roadmap & Upcoming Features
-✅ DICOM Viewer Integration
-✅ Real-time AI Decision Support
-🔜 Multimodal Federated Learning (Privacy-Preserving AI)
-🔜 Clinical Validation & FDA Compliance
+✅ MongoDB Atlas + Render Database Optimization
+✅ Cloudflare Zero Trust Security
+🔜 DICOM Viewer & AI Decision Support
+🔜 Federated Learning for Privacy-Preserving AI
 
 👨‍💻 Contributing
 We welcome open-source contributions! 🎉
@@ -162,8 +191,4 @@ Submit a Pull Request.
 📜 License
 Radiology AI is licensed under the MIT License.
 Read License
-
-⭐ If you find this project helpful, please give it a ⭐ on GitHub!
-
-🚀 Advancing Medical Imaging with OpenAI’s GPT-4 Vision! 🚀
 
