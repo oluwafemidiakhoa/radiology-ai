@@ -6,6 +6,7 @@ import { analyzeImage } from "./api";
 import { ClipLoader } from "react-spinners";
 
 function UploadImage() {
+  // State Management
   const [file, setFile] = useState(null);
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,23 +14,23 @@ function UploadImage() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
 
-  // Handle file drop using react-dropzone
+  // Handle file drop (Drag & Drop)
   const onDrop = useCallback((acceptedFiles) => {
     const droppedFile = acceptedFiles[0];
     if (!droppedFile) return;
 
-    // Validate file type: allow image files and .dcm (DICOM)
+    // Validate file type (JPEG, PNG, DICOM)
     if (
       !droppedFile.type.startsWith("image/") &&
       !droppedFile.name.toLowerCase().endsWith(".dcm")
     ) {
-      setError("Please upload a valid medical image (JPEG, PNG, or DICOM).");
+      setError("❌ Invalid file. Please upload a medical image (JPEG, PNG, or DICOM).");
       return;
     }
 
-    // Check file size (limit to 5MB)
+    // Validate file size (5MB limit)
     if (droppedFile.size > 5 * 1024 * 1024) {
-      setError("File is too large. Please upload an image under 5MB.");
+      setError("❌ File is too large. Please upload an image under 5MB.");
       return;
     }
 
@@ -38,29 +39,29 @@ function UploadImage() {
     setReport("");
   }, []);
 
+  // React Dropzone Configuration
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
   });
 
-  // Create an image preview if the file is a standard image (not DICOM)
+  // Generate image preview for standard image files
   const filePreview =
     file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
 
-  // Handle the analysis process (form submission)
+  // Handle AI Analysis Process
   const handleAnalysis = async () => {
-    // Validate required fields
     if (!file) {
-      setError("Please upload a medical image.");
+      setError("❌ Please upload a medical image.");
       return;
     }
     if (!age || !sex) {
-      setError("Please provide the patient age and biological sex.");
+      setError("❌ Please provide patient age and biological sex.");
       return;
     }
     const numericAge = parseInt(age, 10);
     if (isNaN(numericAge) || numericAge < 0 || numericAge > 120) {
-      setError("Please enter a valid age between 0 and 120.");
+      setError("❌ Enter a valid age between 0 and 120.");
       return;
     }
 
@@ -69,34 +70,33 @@ function UploadImage() {
     setReport("");
 
     try {
-      // Build FormData and append fields
       const formData = new FormData();
       formData.append("file", file);
       formData.append("age", numericAge.toString());
       formData.append("sex", sex);
 
       const data = await analyzeImage(formData);
-      console.log("Backend response:", data);
+      console.log("AI Response:", data);
 
       if (data?.analysis) {
         setReport(data.analysis);
       } else if (data?.error) {
         setError(data.error);
       } else {
-        setError("No analysis text was returned from the server.");
+        setError("⚠️ No analysis text was returned from the server.");
       }
     } catch (err) {
       console.error("Medical image analysis failed:", err);
-      setError("Image analysis failed. Please try again.");
+      setError("⚠️ Image analysis failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle report download as a Markdown file
+  // Handle Report Download
   const handleDownloadReport = () => {
     if (!report) {
-      setError("No report available to download.");
+      setError("⚠️ No report available to download.");
       return;
     }
     const blob = new Blob([report], { type: "text/markdown" });
@@ -110,7 +110,7 @@ function UploadImage() {
     URL.revokeObjectURL(url);
   };
 
-  // Simple Markdown renderer for the AI report
+  // Markdown Renderer for AI Report
   const MedicalReportRenderer = ({ content }) => (
     <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
   );
@@ -118,11 +118,11 @@ function UploadImage() {
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-md">
       <h1 className="text-3xl font-bold text-center mb-8 text-blue-600 dark:text-blue-400">
-        Medical Imaging Analysis
+        🏥 AI-Powered Medical Imaging Analysis
       </h1>
 
       <div className="space-y-6">
-        {/* Drag-and-Drop Zone */}
+        {/* Drag & Drop Upload */}
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
@@ -133,30 +133,22 @@ function UploadImage() {
         >
           <input {...getInputProps()} />
           {isDragActive ? (
-            <p className="text-blue-600 dark:text-blue-400">
-              Drop your medical image here...
-            </p>
+            <p className="text-blue-600 dark:text-blue-400">Drop your medical image here...</p>
           ) : (
             <p className="text-gray-700 dark:text-gray-300">
-              Drag & drop a medical image (JPEG, PNG, or .dcm) here, or click to select
+              Drag & drop an image (JPEG, PNG, or .dcm) here, or click to select.
             </p>
           )}
         </div>
 
-        {/* Fallback Classic File Input */}
+        {/* Classic File Input */}
         <div className="flex items-center justify-center">
-          <p className="mr-2 text-sm text-gray-500 dark:text-gray-400">
-            Or use the classic file chooser:
-          </p>
+          <p className="mr-2 text-sm text-gray-500 dark:text-gray-400">Or select manually:</p>
           <input
             type="file"
-            onChange={(e) => {
-              if (e.target.files[0]) {
-                onDrop([e.target.files[0]]);
-              }
-            }}
+            onChange={(e) => e.target.files[0] && onDrop([e.target.files[0]])}
             accept="image/*,.dcm"
-            className="file:mr-4 file:py-2 file:px-4 file:border-0 file:rounded-md file:bg-blue-600 file:text-white hover:file:bg-blue-700 dark:file:bg-blue-800 dark:hover:file:bg-blue-900 cursor-pointer"
+            className="file:bg-blue-600 file:text-white file:px-4 file:py-2 file:border-0 file:rounded-md cursor-pointer hover:file:bg-blue-700"
           />
         </div>
 
@@ -164,36 +156,28 @@ function UploadImage() {
         {filePreview && (
           <div className="mt-4">
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">Preview:</p>
-            <img
-              src={filePreview}
-              alt="Uploaded Preview"
-              className="max-w-sm rounded border border-gray-200 dark:border-gray-700"
-            />
+            <img src={filePreview} alt="Uploaded Preview" className="max-w-sm rounded border" />
           </div>
         )}
 
-        {/* Patient Demographics */}
+        {/* Patient Information Inputs */}
         <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-blue-600 dark:text-blue-400">
-              Patient Age
-            </label>
+          <div>
+            <label className="block text-sm font-medium">Patient Age</label>
             <input
               type="number"
               value={age}
               onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
-              className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500"
               placeholder="Age (0–120)"
             />
           </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-blue-600 dark:text-blue-400">
-              Biological Sex
-            </label>
+          <div>
+            <label className="block text-sm font-medium">Biological Sex</label>
             <select
               value={sex}
               onChange={(e) => setSex(e.target.value)}
-              className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select</option>
               <option value="Male">Male</option>
@@ -207,47 +191,22 @@ function UploadImage() {
         <button
           onClick={handleAnalysis}
           disabled={loading}
-          className={`w-full py-4 px-8 rounded-lg font-bold text-white transition-colors ${
-            loading
-              ? "bg-gray-400"
-              : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-800 dark:hover:bg-blue-900"
-          }`}
+          className="w-full py-4 px-8 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
         >
-          {loading ? (
-            <div className="flex items-center justify-center gap-2">
-              <ClipLoader color="#ffffff" size={24} />
-              <span>Analyzing...</span>
-            </div>
-          ) : (
-            "Generate Diagnostic Report"
-          )}
+          {loading ? <ClipLoader color="#ffffff" size={24} /> : "🔍 Generate AI Report"}
         </button>
 
-        {/* Error Display */}
-        {error && (
-          <div className="p-4 bg-red-100 dark:bg-red-900/50 rounded-lg text-red-700 dark:text-red-200 border border-red-200 dark:border-red-700">
-            {error}
-          </div>
-        )}
+        {/* Error Handling */}
+        {error && <div className="p-4 bg-red-100 rounded-lg">{error}</div>}
 
-        {/* AI Report Display */}
-        {report && !error && (
-          <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400">
-              AI Diagnostic Report
-            </h2>
-            <div className="prose dark:prose-invert max-w-none">
-              <MedicalReportRenderer content={report} />
-            </div>
-            {/* Download Report Button */}
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={handleDownloadReport}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-semibold shadow"
-              >
-                Download Report (MD)
-              </button>
-            </div>
+        {/* AI Report Section */}
+        {report && (
+          <div className="mt-8 p-6 bg-gray-50 rounded-xl">
+            <h2 className="text-2xl font-bold mb-4">📑 AI Diagnostic Report</h2>
+            <MedicalReportRenderer content={report} />
+            <button onClick={handleDownloadReport} className="mt-4 bg-green-600 text-white px-6 py-2 rounded-md">
+              ⬇ Download Report (MD)
+            </button>
           </div>
         )}
       </div>
