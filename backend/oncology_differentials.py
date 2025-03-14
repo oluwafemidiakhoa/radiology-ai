@@ -2,20 +2,23 @@
 Advanced Oncology Differential Diagnosis Module
 
 This module defines a structured representation of advanced oncology differential diagnoses
-using Python dataclasses. It encapsulates detailed imaging descriptors, risk factors, epidemiology,
-clinical correlations, recommendations, recent research insights, and machine learning observations
-for major cancers. This design facilitates type safety, easy maintenance, and extended functionality
-(e.g., converting entries to dicts or formatted summaries).
+using Python dataclasses. It encapsulates detailed imaging descriptors, risk factors,
+epidemiology, clinical correlations, treatment recommendations, recent research insights,
+and machine learning observations for key cancers. The design ensures type safety, easy
+maintenance, and flexible usage (e.g., converting entries to dictionaries or formatted
+summaries).
 
 Usage:
     from oncology_differentials import get_oncology_differential, list_oncology_differentials
 
+    # Retrieve a differential for Breast Cancer:
     differential = get_oncology_differential("Breast Cancer")
     print(differential.formatted_summary())
 
+    # Iterate through all known oncology differentials:
     all_differentials = list_oncology_differentials()
-    for cancer, diff in all_differentials.items():
-        print(f"{cancer}: {diff.epidemiology}")
+    for cancer_name, diff_data in all_differentials.items():
+        print(f"{cancer_name}: {diff_data.epidemiology}")
 """
 
 from dataclasses import dataclass, asdict, field
@@ -23,6 +26,19 @@ from typing import List, Dict
 
 @dataclass
 class OncologyDifferential:
+    """
+    Encapsulates the diagnostic profile of a specific cancer type, including:
+      - Imaging Descriptors
+      - Risk Factors
+      - Epidemiology
+      - Clinical Diagnostic Correlations
+      - Core Recommendations
+      - Recent Research Highlights
+      - ML (Machine Learning) Insights
+
+    Structured for maximum clarity, this dataclass allows easy serialization,
+    straightforward integration with ML pipelines, and user-friendly summary generation.
+    """
     imaging_descriptors: List[str] = field(default_factory=list)
     risk_factors: List[str] = field(default_factory=list)
     epidemiology: str = ""
@@ -32,11 +48,17 @@ class OncologyDifferential:
     ml_insights: str = ""
 
     def to_dict(self) -> Dict:
-        """Convert the oncology differential entry into a dictionary."""
+        """
+        Converts the instance into a dictionary, facilitating easy export to APIs,
+        databases, or JSON-based pipelines.
+        """
         return asdict(self)
 
     def formatted_summary(self) -> str:
-        """Returns a formatted multi-line summary of the differential diagnosis."""
+        """
+        Produces a multi-line string summarizing each aspect of the differential.
+        Ideal for logging, CLI tools, or display in web interfaces.
+        """
         parts = []
         if self.imaging_descriptors:
             parts.append("Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors))
@@ -45,7 +67,8 @@ class OncologyDifferential:
         if self.epidemiology:
             parts.append(f"Epidemiology:\n  {self.epidemiology}")
         if self.clinical_diagnostic_correlations:
-            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+            parts.append("Clinical Diagnostic Correlations:\n  - " 
+                         + "\n  - ".join(self.clinical_diagnostic_correlations))
         if self.recommendations:
             parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
         if self.recent_research:
@@ -55,151 +78,181 @@ class OncologyDifferential:
         return "\n\n".join(parts)
 
 
-# Define the oncology differentials using the dataclass structure.
+###############################################################################
+# Dictionary of Oncology Differentials
+###############################################################################
 oncology_differentials: Dict[str, OncologyDifferential] = {
     "Breast Cancer": OncologyDifferential(
         imaging_descriptors=[
-            "Mass with spiculated margins",
+            "Spiculated mass margins",
             "Microcalcifications",
             "Architectural distortion",
             "Nipple retraction",
             "Skin thickening",
             "Lymphadenopathy",
-            "Ductal irregularities"
+            "Irregular ductal changes"
         ],
         risk_factors=[
-            "Age",
+            "Advancing age",
             "Family history",
-            "Genetic mutations (BRCA1, BRCA2)",
-            "Early menarche, late menopause",
+            "Genetic predisposition (BRCA1, BRCA2)",
+            "Early menarche / Late menopause",
             "Nulliparity or late first pregnancy",
             "Hormone replacement therapy",
             "Obesity",
-            "Alcohol consumption"
+            "Regular alcohol intake"
         ],
-        epidemiology="Most common cancer in women worldwide; incidence increases in high-risk populations.",
+        epidemiology=(
+            "Most prevalent cancer in women worldwide; incidence is elevated in high-risk populations, "
+            "underscoring the value of screening."
+        ),
         clinical_diagnostic_correlations=[
             "Palpable breast mass",
-            "Nipple discharge",
-            "Skin changes",
+            "Nipple discharge (serous or bloody)",
+            "Skin erythema or dimpling",
             "Lymph node enlargement",
-            "Breast pain"
+            "Breast or axillary pain"
         ],
         recommendations=[
-            "Mammography and digital breast tomosynthesis",
-            "Breast ultrasound",
-            "MRI of the breast for high-risk screening",
-            "Image-guided core needle biopsy",
-            "Sentinel lymph node biopsy for staging",
-            "Surgical resection (lumpectomy or mastectomy)",
-            "Radiation therapy",
-            "Chemotherapy",
-            "Hormone therapy",
-            "Targeted therapy",
-            "Immunotherapy",
-            "Molecular subtyping (HER2, ER, PR testing)"
+            "Mammography and digital tomosynthesis",
+            "Targeted breast ultrasound",
+            "MRI for high-risk screening",
+            "Core needle biopsy with image guidance",
+            "Sentinel lymph node mapping",
+            "Surgical resection (lumpectomy vs. mastectomy)",
+            "Adjuvant radiation therapy",
+            "Chemotherapy regimens (anthracycline- or taxane-based)",
+            "Endocrine therapy if hormone receptor-positive",
+            "HER2-targeted therapy if HER2-positive",
+            "Immunotherapy for PD-L1-positive subtypes",
+            "Consider molecular subtyping"
         ],
         recent_research=(
-            "Emerging liquid biopsy techniques and AI-enhanced imaging are revolutionizing early detection "
-            "and personalized treatment."
+            "Liquid biopsy techniques and AI-driven mammography solutions are shifting paradigms "
+            "toward earlier detection and individualized treatments."
         ),
-        ml_insights="Machine learning models now accurately predict tumor receptor status from imaging alone."
+        ml_insights=(
+            "Deep learning models can classify tumor receptor status and predict response to neoadjuvant "
+            "therapy, promoting precision medicine."
+        )
     ),
+
     "Prostate Cancer": OncologyDifferential(
         imaging_descriptors=[
             "Peripheral zone lesion",
-            "Reduced diffusion on MRI",
-            "Elevated choline/citrate ratio on MR spectroscopy",
-            "Bone metastases",
-            "Heterogeneous signal intensity"
+            "Low ADC values on DWI MRI",
+            "Elevated choline/citrate ratio (MR spectroscopy)",
+            "Osteoblastic bone metastases",
+            "Heterogeneous signal on T2-weighted MRI"
         ],
         risk_factors=[
-            "Age",
+            "Increasing age",
+            "Genetic predisposition",
             "Family history",
             "African American ethnicity",
             "High-fat diet",
             "Obesity"
         ],
-        epidemiology="Most common cancer in men; risk increases significantly with age.",
+        epidemiology=(
+            "Most frequently diagnosed cancer in men; the risk increases substantially post-50, "
+            "with a notable mortality impact if untreated."
+        ),
         clinical_diagnostic_correlations=[
-            "Elevated PSA levels",
-            "Urinary symptoms (frequency, urgency, nocturia)",
-            "Bone pain (in metastatic cases)",
-            "Erectile dysfunction"
+            "Elevated PSA (Prostate-Specific Antigen)",
+            "Urinary frequency or urgency",
+            "Nocturia",
+            "Dysuria",
+            "Metastatic bone pain",
+            "Erectile dysfunction in advanced stages"
         ],
         recommendations=[
-            "PSA testing",
+            "PSA screening (with age and risk considerations)",
             "Digital rectal exam (DRE)",
-            "Transrectal ultrasound (TRUS) with biopsy",
-            "MRI of the prostate",
-            "Gleason scoring for risk stratification",
+            "Transrectal ultrasound (TRUS)-guided biopsy",
+            "Multiparametric MRI of the prostate",
+            "Gleason score determination",
             "Active surveillance for low-risk disease",
             "Radical prostatectomy",
-            "Radiation therapy",
-            "Hormone therapy",
-            "Chemotherapy",
-            "Molecular profiling for targeted treatment"
+            "External beam radiation therapy",
+            "Androgen deprivation therapy",
+            "Chemotherapy (advanced cases)",
+            "Genomic profiling for novel targets"
         ],
-        recent_research="Advances in multiparametric MRI and genomic classifiers are refining risk stratification.",
-        ml_insights="Deep learning algorithms can now segment prostate lesions with high precision, aiding in biopsy targeting."
+        recent_research=(
+            "Innovations in MRI-targeted biopsy and genomic classifiers refine risk stratification, "
+            "reducing over-treatment of indolent disease."
+        ),
+        ml_insights=(
+            "Computer vision algorithms excel at segmenting prostate lesions and guiding precise biopsy, "
+            "improving diagnostic yield."
+        )
     ),
+
     "Colorectal Cancer": OncologyDifferential(
         imaging_descriptors=[
-            "Polypoid lesion",
-            "Annular constricting lesion",
-            "Bowel wall thickening",
-            "Lymph node metastases",
-            "Liver metastases",
+            "Polypoid lesion in the colon",
+            "Annular constricting lesion (napkin-ring appearance)",
+            "Thickened bowel wall",
+            "Lymph node enlargement",
+            "Hepatic metastases",
             "Peritoneal implants",
-            "Mucosal irregularities"
+            "Irregular mucosal surface"
         ],
         risk_factors=[
-            "Age",
-            "Family history",
-            "Inflammatory bowel disease (IBD)",
-            "Diet high in red and processed meat",
-            "Smoking",
-            "Obesity",
-            "Alcohol consumption"
+            "Older age (>50)",
+            "Family history of colorectal cancer",
+            "Chronic inflammatory bowel disease (Ulcerative Colitis, Crohn's)",
+            "Diets high in red/processed meats",
+            "Tobacco use",
+            "Excessive alcohol intake",
+            "Obesity"
         ],
-        epidemiology="Third most common cancer worldwide; effective screening programs significantly reduce mortality.",
+        epidemiology=(
+            "Among the top three most prevalent cancers globally; screening colonoscopy and fecal tests "
+            "have significantly reduced mortality in many regions."
+        ),
         clinical_diagnostic_correlations=[
-            "Altered bowel habits",
-            "Rectal bleeding",
-            "Abdominal pain",
-            "Weight loss",
+            "Changes in bowel habits (constipation or diarrhea)",
+            "Occult or overt rectal bleeding",
+            "Abdominal discomfort or cramping",
+            "Unexplained weight loss",
             "Iron deficiency anemia"
         ],
         recommendations=[
-            "Colonoscopy",
-            "Flexible sigmoidoscopy",
-            "Fecal occult blood test (FOBT)",
-            "Fecal immunochemical test (FIT)",
-            "CT colonography",
+            "Colonoscopy (gold standard)",
+            "Fecal occult blood tests (FOBT) or fecal immunochemical tests (FIT)",
+            "CT colonography as a less invasive alternative",
             "Biopsy for histopathological confirmation",
-            "Surgical resection",
-            "Chemotherapy",
-            "Radiation therapy",
-            "Targeted therapy",
-            "Immunotherapy"
+            "Surgical resection with clear margins",
+            "Adjuvant or neoadjuvant chemotherapy",
+            "Radiation therapy (especially for rectal cancers)",
+            "Targeted therapies (e.g., EGFR or VEGF inhibitors)",
+            "Immunotherapy in select molecular subtypes"
         ],
-        recent_research="AI-driven colonoscopy and molecular diagnostics are emerging to enhance early detection.",
-        ml_insights="Advanced algorithms now assist in detecting subtle mucosal irregularities indicative of early neoplasia."
+        recent_research=(
+            "AI-aided polyp detection is enhancing adenoma detection rates, potentially lowering intervals "
+            "between screening and diagnosis."
+        ),
+        ml_insights=(
+            "Multi-modal machine learning frameworks integrate endoscopic imaging, genomics, and clinical "
+            "metadata to project recurrence and survival probabilities."
+        )
     ),
 }
 
 def get_oncology_differential(cancer_type: str) -> OncologyDifferential:
     """
-    Retrieve the oncology differential for a given cancer type.
+    Retrieves the oncology differential data object for a given cancer type.
 
     Args:
-        cancer_type (str): The cancer type (e.g., "Breast Cancer").
+        cancer_type (str): e.g. "Breast Cancer"
 
     Returns:
-        OncologyDifferential: The differential diagnosis data for the specified cancer.
+        OncologyDifferential: Contains imaging descriptors, risk factors, 
+        and additional context for the requested cancer.
 
     Raises:
-        KeyError: If the specified cancer type is not available.
+        KeyError: If the specified cancer type is not recognized or unavailable.
     """
     try:
         return oncology_differentials[cancer_type]
@@ -208,9 +261,10 @@ def get_oncology_differential(cancer_type: str) -> OncologyDifferential:
 
 def list_oncology_differentials() -> Dict[str, OncologyDifferential]:
     """
-    List all available oncology differentials.
+    Enumerates all available oncology differentials in a shallow copy of the underlying dictionary.
+    Useful for auto-generating menus, dynamic UI elements, or advanced analytics tasks.
 
     Returns:
-        Dict[str, OncologyDifferential]: A dictionary mapping cancer types to their differential data.
+        Dict[str, OncologyDifferential]: Mapping from cancer names to their respective differentials.
     """
     return oncology_differentials.copy()
