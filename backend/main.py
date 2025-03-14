@@ -1,16 +1,3 @@
-"""
-Enhanced Main API for AI-Powered Medical Imaging (Now Including Histopathology)
-
-This FastAPI application processes both DICOM and standard image formats through an AI model,
-integrates evidence-based guidelines with dynamic PubMed references, and logs final reports in MongoDB.
-
-New in this release:
-1. Identifies “Histopathology” modality from AI output or user input.
-2. Applies a refined PubMed query to gather histopathology-specific references.
-3. Omits PubMed citations if no pertinent query is generated.
-4. Adds guidelines only if a “Histopathology” key is present in `evidence_based_guidelines`.
-"""
-
 import os
 import io
 import base64
@@ -30,52 +17,52 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# MongoDB data operations
+# MongoDB integration functions (synchronous)
 from models import store_report, get_report, list_reports
 
-# Validate OpenAI API key from config
+# Load and validate OpenAI API key
 try:
     from config import OPENAI_API_KEY
 except ImportError as e:
-    logging.error(f"Cannot import config: {e}")
+    logging.error(f"Failed to import config: {e}")
     OPENAI_API_KEY = None
-    exit("Configuration not found. Shutting down.")
+    exit("Missing configuration. Terminating startup.")
 
 if not OPENAI_API_KEY or not OPENAI_API_KEY.startswith("sk-"):
-    logging.error("OpenAI API key missing or invalid. Please check your configuration.")
-    exit("API key is invalid. Stopping execution.")
+    logging.error("Invalid or missing OpenAI API key. Check your config.")
+    exit("API key error. Exiting.")
 
-# Bring in dictionaries for differential diagnoses and guidelines
+# Domain knowledge integrations
 from differentials import medical_differentials, evidence_based_guidelines
-
-# Synchronous PubMed retrieval
 from pubmed import fetch_pubmed_articles_sync
 
-# Configure logging
+# Configure global logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("MedicalImagingAI")
 
-# Initialize the asynchronous OpenAI client
+# Initialize asynchronous OpenAI client
 try:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 except ImportError as e:
-    logger.error(f"Could not initialize OpenAI: {e}")
+    logger.error(f"OpenAI client initialization failure: {e}")
     client = None
 
-# Set up the FastAPI application
+# FastAPI application instantiation
 app = FastAPI(
-    title="Medical Imaging AI with PubMed",
+    title="Ultra-Advanced Medical Imaging AI Platform",
     description=(
-        "A next-generation AI service for analyzing medical imaging (including histopathology) "
-        "that integrates evidence-based guidelines and PubMed data in real time."
+        "A next-generation microservice for clinical-grade image analysis, "
+        "capable of orchestrating DICOM/histopathology processing, "
+        "dynamic guidelines, real-time PubMed references, and robust MongoDB reporting."
     ),
-    version="1.2.0",
+    version="2.0.0",
 )
 
+# CORS setup for cross-domain integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -84,206 +71,209 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global constants
-MIN_RESOLUTION = 512
-REQUIRED_DISCLAIMER = (
-    "\n\n*AI-generated content – Requires confirmation by a board-certified radiologist*"
+# Global Constants
+MIN_RESOLUTION: int = 512
+REQUIRED_DISCLAIMER: str = (
+    "\n\n*AI-generated analysis – Validation by a certified radiologist or pathologist required.*"
 )
 
-#######################################
-# Helper Functions
-#######################################
+############################################
+# Core Utility Functions
+############################################
 
 def encode_image_to_data_url(image: Image.Image) -> str:
     """
-    Converts a PIL Image instance to a base64-encoded data URL.
+    Converts a PIL Image to a base64 data URL, enabling efficient inline usage within AI prompts
+    or for rapid debugging/visualization. Compressed as JPEG by default for size efficiency.
     """
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
-    encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return f"data:image/jpeg;base64,{encoded}"
+    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return f"data:image/jpeg;base64,{img_b64}"
 
 
-def validate_dicom_metadata(dicom_data: pydicom.Dataset) -> None:
+def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """
-    Checks that a DICOM dataset contains the required tags for further processing.
+    Ensures that critical DICOM fields (Modality, BodyPartExamined, PatientID) are present.
+    Raises HTTPException for incomplete or invalid metadata, preserving data fidelity.
     """
-    necessary_tags = ["Modality", "BodyPartExamined", "PatientID"]
-    missing = [tag for tag in necessary_tags if tag not in dicom_data]
+    required_tags = ["Modality", "BodyPartExamined", "PatientID"]
+    missing = [tag for tag in required_tags if tag not in dicom_obj]
     if missing:
-        logger.error(f"Required DICOM tags missing: {missing}")
+        logger.error(f"Critical DICOM tags missing: {missing}")
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient DICOM metadata: {', '.join(missing)}"
+            detail=f"Missing DICOM metadata: {', '.join(missing)}"
         )
 
 
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """
-    Reads and converts an uploaded medical image (DICOM or standard) into a PIL Image,
-    ensuring it meets the minimum resolution.
+    Ingests raw image data and unifies the handling of both DICOM and standard image files:
+    1. For DICOM files, normalizes pixel intensities and checks essential metadata.
+    2. For non-DICOM files, validates and converts the image to RGB if needed.
+    3. Ensures a minimum resolution (512 x 512) by resizing smaller images.
+    Returns a (PIL.Image, base64_url) tuple for downstream usage.
     """
     try:
         if filename.endswith(".dcm"):
-            # Handle DICOM
-            dicom_data = pydicom.dcmread(io.BytesIO(raw_data))
-            validate_dicom_metadata(dicom_data)
-            pixel_array = dicom_data.pixel_array
-            normalized_array = (
+            # High-fidelity DICOM processing
+            dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
+            validate_dicom_metadata(dicom_obj)
+            pixel_array = dicom_obj.pixel_array
+            norm_array = (
                 (pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255
             ).astype(np.uint8)
-            image = Image.fromarray(normalized_array)
+            image = Image.fromarray(norm_array)
         else:
-            # Handle standard image formats
+            # Standard image processing
             image = Image.open(io.BytesIO(raw_data))
             if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
 
-        # Enlarge image if it’s below the minimum resolution
+        # Enforce minimum resolution through upscaling if needed
         if min(image.size) < MIN_RESOLUTION:
-            width, height = image.size
-            if width < height:
-                new_width = MIN_RESOLUTION
-                new_height = int(height * (MIN_RESOLUTION / width))
+            w, h = image.size
+            if w < h:
+                new_w = MIN_RESOLUTION
+                new_h = int(h * (MIN_RESOLUTION / w))
             else:
-                new_height = MIN_RESOLUTION
-                new_width = int(width * (MIN_RESOLUTION / height))
-            image = image.resize((new_width, new_height))
+                new_h = MIN_RESOLUTION
+                new_w = int(w * (MIN_RESOLUTION / h))
+            image = image.resize((new_w, new_h))
 
-        return image, encode_image_to_data_url(image)
+        data_url = encode_image_to_data_url(image)
+        return image, data_url
+
     except UnidentifiedImageError:
-        raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
+        raise HTTPException(status_code=400, detail="Unrecognized or corrupted image file.")
     except Exception as e:
-        logger.error(f"Error when processing image: {e}")
-        raise HTTPException(status_code=500, detail="Image processing failed.")
+        logger.error(f"Image processing failure: {e}")
+        raise HTTPException(status_code=500, detail="Image processing pipeline error.")
 
 
-def reformat_analysis(text: str, include_disclaimer: bool = True) -> str:
+def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
-    Cleans up the AI-derived text, optionally adding a disclaimer if not present.
+    Trims and organizes multi-line AI responses, optionally injecting a mandatory disclaimer
+    to ensure clinically safe communication. Repeated disclaimers are avoided through checks.
     """
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    structured = "\n".join(lines)
-    if include_disclaimer and REQUIRED_DISCLAIMER not in structured:
-        structured += REQUIRED_DISCLAIMER
-    return structured
+    lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
+    formatted = "\n".join(lines)
+    if disclaimers and REQUIRED_DISCLAIMER not in formatted:
+        formatted += REQUIRED_DISCLAIMER
+    return formatted
 
+############################################
+# Differential and Guideline Integration
+############################################
 
-#######################################
-# Integrating Differentials & Guidelines
-#######################################
-
-def select_differentials(analysis_text: str) -> List[str]:
+def select_differentials(analysis: str) -> List[str]:
     """
-    Simple keyword-based approach to identify potential differential categories.
-    Extend or tailor as necessary.
+    Searches the AI analysis text for known clinical triggers (e.g., 'pacemaker', 'infiltrate'),
+    mapping them to categories in `medical_differentials`. Extend logic as needed.
     """
     selected = []
-    lower_text = analysis_text.lower()
-    if "pacemaker" in lower_text:
+    text = analysis.lower()
+    if "pacemaker" in text:
         selected.append("Cardiology")
-    if "consolidation" in lower_text or "infiltrate" in lower_text:
+    if "consolidation" in text or "infiltrate" in text:
         selected.append("Pulmonary")
-    if "scoliosis" in lower_text:
+    if "scoliosis" in text:
         selected.append("Musculoskeletal")
-    # Add more conditions or logic if needed.
     return selected
 
 
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
     """
-    Adds supplementary differential diagnostic details from `medical_differentials`.
+    Merges domain-specific differentials from the `medical_differentials` dictionary into
+    the final AI report. This helps clinicians quickly see alternative considerations.
     """
-    extra_sections = []
-    radiology_info = medical_differentials.get("Radiology", {})
+    extra_info = []
+    radiology_diff = medical_differentials.get("Radiology", {})
 
-    for category in categories:
-        cat_content = radiology_info.get(category, {})
-        if not cat_content:
+    for cat in categories:
+        cat_data = radiology_diff.get(cat, {})
+        if not cat_data:
             continue
-
-        lines = [f"**Additional {category} Differentials:**"]
-        if isinstance(cat_content, dict):
-            for subcat, details in cat_content.items():
+        lines = [f"**Additional {cat} Differentials:**"]
+        if isinstance(cat_data, dict):
+            for subcat, details in cat_data.items():
                 if hasattr(details, "formatted_summary"):
                     lines.append(f"- {subcat}: {details.formatted_summary()}")
                 else:
                     lines.append(f"- {subcat}: {details}")
-        extra_sections.append("\n".join(lines))
+        extra_info.append("\n".join(lines))
 
-    if extra_sections:
-        return analysis_text + "\n\n" + "\n\n".join(extra_sections)
+    if extra_info:
+        return analysis_text + "\n\n" + "\n\n".join(extra_info)
     return analysis_text
 
 
-def incorporate_guidelines(
-    analysis_text: str, guidelines_data: Dict[str, Any], modality: str
-) -> str:
+def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modality: str) -> str:
     """
-    If relevant guidelines are available for the recognized modality,
-    adds a guidelines summary to the analysis text.
+    Appends established modality-specific guidelines—such as those for Chest X-ray, Mammogram,
+    or Histopathology—to the AI's analysis text, reinforcing an evidence-based approach.
     """
-    relevant_guidelines = guidelines_data.get(modality, {})
-    if not relevant_guidelines:
+    selected_guidelines = guidelines.get(modality, {})
+    if not selected_guidelines:
         return analysis_text
 
-    lines = []
-    for guideline_title, guideline_content in relevant_guidelines.items():
-        lines.append(f"**{guideline_title} Guidelines Summary:**")
-        if isinstance(guideline_content, dict):
-            for topic, topic_info in guideline_content.items():
-                lines.append(f"- {topic}: {topic_info}")
-        elif isinstance(guideline_content, list):
-            lines.append("- " + ", ".join(guideline_content))
+    glines = []
+    for guideline_name, details in selected_guidelines.items():
+        glines.append(f"**{guideline_name} Guidelines Summary:**")
+        if isinstance(details, dict):
+            for topic, topic_details in details.items():
+                glines.append(f"- {topic}: {topic_details}")
+        elif isinstance(details, list):
+            glines.append("- " + ", ".join(details))
         else:
-            lines.append(f"- {guideline_content}")
+            glines.append(f"- {details}")
 
-    if lines:
-        return analysis_text + "\n\n" + "\n".join(lines)
+    if glines:
+        return analysis_text + "\n\n" + "\n".join(glines)
     return analysis_text
 
-
-#######################################
-# PubMed Lookup
-#######################################
+############################################
+# PubMed Connectivity and Caching
+############################################
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
     """
-    Provides a cached call to PubMed, reducing duplicate requests for identical queries.
+    Caches PubMed search results for performance optimization, leveraging synchronous queries.
+    Repeated queries within a certain window are quickly served from memory.
     """
     return fetch_pubmed_articles_sync(query, max_results)
 
 
 async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) -> str:
     """
-    Runs a PubMed lookup asynchronously. Returns an empty string if `query` is invalid or empty.
+    Executes a PubMed search asynchronously by threading out to the synchronous function.
+    If a query string is blank or None, returns an empty string to skip references.
     """
     if not query:
         return ""
-    references = await asyncio.to_thread(
-        fetch_pubmed_articles_sync_cached, query, max_results
-    )
-    if references:
-        return "**Relevant PubMed References:**\n" + "\n".join(f"- {ref}" for ref in references)
+    refs = await asyncio.to_thread(fetch_pubmed_articles_sync_cached, query, max_results)
+    if refs:
+        return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return ""
-
 
 def extract_pubmed_query(analysis_text: str) -> Optional[str]:
     """
-    Generates a PubMed query based on detected modalities or keywords. 
-    Returns `None` if no relevant keywords are present, thereby skipping references.
+    Inspects AI-generated text for trigger words to formulate precise PubMed queries.
+    Supports:
+    - Histopathology queries (e.g., 'fibroadenoma', 'ductal')
+    - Chest X-ray queries ('infiltrate', 'pneumonia')
+    - Mammogram queries ('breast mass', 'mammogram')
+    Returns None if no recognized keywords are found, obviating irrelevant searches.
     """
     txt = analysis_text.lower()
 
-    # Histopathology-specific rule
-    if any(
-        keyword in txt
-        for keyword in ["histopathology", "microscopic", "ductal", "fibroadenoma"]
-    ):
+    # Histopathology detection
+    if any(word in txt for word in ["histopathology", "microscopic", "ductal", "fibroadenoma"]):
         return "fibroadenoma breast histopathology OR immunohistochemistry"
 
-    # Chest X-ray-based logic
+    # Chest X-ray detection
     if "normal chest x-ray" in txt:
         return "normal chest x-ray screening recommendations"
     elif "pneumonia" in txt or "infiltrate" in txt:
@@ -291,163 +281,169 @@ def extract_pubmed_query(analysis_text: str) -> Optional[str]:
     elif "nodule" in txt:
         return "pulmonary nodule chest x-ray follow-up"
 
-    # Mammogram-based logic
+    # Mammogram detection
     if "mammogram" in txt or "breast mass" in txt:
         return "breast mass mammogram fibroadenoma or cyst"
 
-    # If nothing matches, no references are added
     return None
 
-
-#######################################
-# OpenAI Prompt Configuration
-#######################################
+############################################
+# OpenAI System Prompt
+############################################
 
 system_prompt = (
-    "You are a medical imaging AI assistant. Compose a concise, evidence-based report using these headings:\n\n"
+    "You are a highly advanced medical imaging AI system. Present a structured, evidence-based report using headings:\n\n"
     "## Image Characteristics (Certainty: in percentage)\n- Modality:\n- Quality:\n- Findings:\n\n"
     "## Pattern Recognition (Certainty: in percentage)\n- Key patterns:\n\n"
     "## Clinical Considerations (Certainty: in percentage)\n- Next steps:\n- Differentials:\n\n"
-    "## Summary\n- Final key points.\n\n"
-    "Use accessible language, incorporate relevant demographics, and avoid excessive jargon. "
-    "Do not insert disclaimers about inability to interpret images—directly provide an assessment. "
-    "Proceed with a detailed interpretation of the supplied medical image."
+    "## Summary\n- Bullet points of final insights.\n\n"
+    "Focus on clarity, incorporate relevant patient details, and avoid disclaimers about inability to interpret images. "
+    "Explain your observations directly and succinctly, employing standard medical terminology. "
+    "Use the provided image data to formulate your detailed interpretation."
 )
 
-
-#######################################
-# API Routes
-#######################################
+############################################
+# FastAPI Endpoints
+############################################
 
 @app.post("/analyze-image/", response_class=JSONResponse)
 async def analyze_image(
     file: UploadFile = File(...),
-    age: Optional[int] = Query(None, description="Patient's age"),
-    sex: Optional[str] = Query(None, description="Patient's gender (Male/Female)")
+    age: Optional[int] = Query(None, description="Patient's age (optional)"),
+    sex: Optional[str] = Query(None, description="Patient's sex (Male/Female, optional)")
 ) -> Dict[str, Any]:
     """
-    Accepts an uploaded medical or histopathology image and returns an AI-generated report.
-    The system handles both DICOM and standard formats, enhances the analysis with differentials,
-    modality-specific guidelines, targeted PubMed references, and saves the final outcome to MongoDB.
+    **Primary Endpoint**  
+    Accepts a DICOM or standard image, processes it, and submits it to an advanced AI pipeline
+    that:
+    1. Generates an interpretive report
+    2. Infers or confirms modality (Histopathology, ChestXRay, Mammogram, etc.)
+    3. Merges recognized differentials
+    4. Incorporates relevant practice guidelines
+    5. Retrieves PubMed references, if applicable
+    6. Persists the final narrative to MongoDB
+
+    This endpoint exemplifies a fully integrated, next-generation approach to medical imaging AI,
+    designed to streamline and optimize clinical workflows.
     """
     try:
         if age is not None:
-            logger.info(f"Patient's age: {age}")
+            logger.info(f"Patient age provided: {age}")
         if sex is not None:
-            logger.info(f"Patient's sex: {sex}")
+            logger.info(f"Patient sex provided: {sex}")
 
         raw_data = await file.read()
         filename = file.filename.lower()
 
-        # Convert and validate the uploaded image
+        # Image Preprocessing
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # Assemble messages for the AI model
+        # AI Prompt Assembly
         messages = [
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Please analyze this medical image."},
+                    {"type": "text", "text": "Please analyze this medical image:"},
                     {"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}
                 ]
             }
         ]
 
-        # Invoke the AI model for analysis
+        # AI Model Invocation
         if client is None:
             logger.warning("OpenAI client is not initialized.")
-            analysis = "AI analysis is currently unavailable."
+            analysis = "AI service currently unavailable."
         else:
             response = await client.chat.completions.create(
-                model="gpt-4o",  # Adjust to your specific model if needed
+                model="gpt-4o",  # Adjust to your actual OpenAI model
                 messages=messages,
                 max_tokens=2500,
                 temperature=0.3
             )
             analysis = response.choices[0].message.content
 
-        # Clean and finalize the AI-generated text
+        # Analysis Post-Processing
         analysis = reformat_analysis(analysis)
 
-        # Integrate differential diagnoses
-        diffs = select_differentials(analysis)
-        analysis = incorporate_differentials(analysis, diffs)
+        # Integrate Differentiate Diagnoses
+        categories = select_differentials(analysis)
+        analysis = incorporate_differentials(analysis, categories)
 
-        # Detect the modality for guidelines
+        # Determine Modality
         modality = "General"
         if filename.endswith(".dcm"):
             try:
-                dicom_data = pydicom.dcmread(io.BytesIO(raw_data))
-                dicom_modality = getattr(dicom_data, "Modality", "").upper()
-                if dicom_modality in ["CR", "DR", "DX", "RF"]:
+                dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
+                modality_tag = getattr(dicom_obj, "Modality", "").upper()
+                if modality_tag in ["CR", "DR", "DX", "RF"]:
                     modality = "ChestXRay"
-                elif dicom_modality == "MG":
+                elif modality_tag == "MG":
                     modality = "Mammogram"
-                elif dicom_modality == "SM":  # Example for slide microscopy
+                elif modality_tag == "SM":
                     modality = "Histopathology"
             except Exception:
                 modality = "General"
         else:
-            # Use textual cues in the analysis
-            lowercase_analysis = analysis.lower()
-            if any(
-                term in lowercase_analysis
-                for term in ["histopathology", "microscopic", "ductal"]
-            ):
+            # Simple heuristic for standard images
+            txt_lower = analysis.lower()
+            if any(k in txt_lower for k in ["histopathology", "microscopic", "ductal"]):
                 modality = "Histopathology"
-            elif "chest" in lowercase_analysis:
+            elif "chest" in txt_lower:
                 modality = "ChestXRay"
-            elif "mammogram" in lowercase_analysis or "breast" in lowercase_analysis:
+            elif any(k in txt_lower for k in ["mammogram", "breast"]):
                 modality = "Mammogram"
 
-        # Add guidelines for the determined modality
+        # Apply Modality-Specific Guidelines
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines, modality)
 
-        # Look up and embed PubMed references
+        # Fetch PubMed References
         pubmed_query = extract_pubmed_query(analysis)
-        references = await fetch_pubmed_references(pubmed_query)
-        if references:
-            analysis += "\n\n" + references
+        pubmed_refs = await fetch_pubmed_references(pubmed_query)
+        if pubmed_refs:
+            analysis += "\n\n" + pubmed_refs
 
-        # Save the completed report to MongoDB
+        # Store in MongoDB
         await asyncio.to_thread(store_report, filename, analysis)
 
-        image_info = {
+        # Return Consolidated Results
+        image_meta = {
             "dimensions": image.size,
             "mode": image.mode,
             "format": "DICOM" if filename.endswith(".dcm") else "Standard"
         }
         return JSONResponse(content={
             "filename": filename,
-            "image_metadata": image_info,
+            "image_metadata": image_meta,
             "analysis": analysis
         })
-    except HTTPException as e:
-        raise e
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as ex:
-        logger.error(f"Analysis failed: {ex}")
-        raise HTTPException(status_code=500, detail="AI analysis could not be completed.")
+        logger.error(f"Pipeline error: {ex}")
+        raise HTTPException(status_code=500, detail="AI analysis pipeline unavailable.")
 
 
 @app.get("/reports/", response_class=JSONResponse)
 async def get_all_reports() -> Dict[str, Any]:
     """
-    Retrieves all stored diagnostic reports from MongoDB.
+    Retrieves an aggregation of every diagnostic report in MongoDB, offering clinicians and
+    administrators a historical log of all AI analyses conducted through this service.
     """
-    all_reports = await asyncio.to_thread(list_reports)
-    return JSONResponse(content={"reports": all_reports})
+    reports = await asyncio.to_thread(list_reports)
+    return JSONResponse(content={"reports": reports})
 
 
 @app.get("/download-report/{filename}", response_class=JSONResponse)
 async def download_report(filename: str) -> Dict[str, Any]:
     """
-    Fetches a single diagnostic report from MongoDB by filename.
+    Fetches and returns a specific diagnostic report by filename from the database, enabling
+    direct consumption or offline review.
     """
-    report_data = await asyncio.to_thread(get_report, filename)
-    if not report_data:
-        raise HTTPException(status_code=404, detail="No report found with that filename.")
-    return JSONResponse(content=report_data)
+    report = await asyncio.to_thread(get_report, filename)
+    if not report:
+        raise HTTPException(status_code=404, detail="No corresponding report found.")
+    return JSONResponse(content=report)
 
 
 if __name__ == "__main__":
