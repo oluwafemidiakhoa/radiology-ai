@@ -5,7 +5,15 @@ import remarkGfm from "remark-gfm";
 import { analyzeImage } from "./api";
 import { ClipLoader } from "react-spinners";
 
+/**
+ * UploadImage Component
+ *
+ * Uploads a medical image (JPEG, PNG, or DICOM) and patient demographics to an AI backend.
+ * Structures the resulting "analysis" text into a standardized multi-section report with
+ * bold headings and bullet points, leveraging Markdown for rich formatting.
+ */
 function UploadImage() {
+  // State: file, final report text, loading state, error, demographics
   const [file, setFile] = useState(null);
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,12 +21,15 @@ function UploadImage() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
 
-  // Handle file drop using react-dropzone
+  /**
+   * onDrop callback from react-dropzone
+   * Validates the file type/size, then updates local state.
+   */
   const onDrop = useCallback((acceptedFiles) => {
     const droppedFile = acceptedFiles[0];
     if (!droppedFile) return;
 
-    // Validate file type: allow image files and .dcm (DICOM)
+    // Validate file type
     if (
       !droppedFile.type.startsWith("image/") &&
       !droppedFile.name.toLowerCase().endsWith(".dcm")
@@ -27,35 +38,40 @@ function UploadImage() {
       return;
     }
 
-    // Check file size (limit to 5MB)
+    // Validate max size = 5MB
     if (droppedFile.size > 5 * 1024 * 1024) {
       setError("File is too large. Please upload an image under 5MB.");
       return;
     }
 
     setFile(droppedFile);
-    setError("");
     setReport("");
+    setError("");
   }, []);
 
+  // react-dropzone setup
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
   });
 
-  // Create an image preview if the file is a standard image (not DICOM)
+  // Preview if it's a standard image type
   const filePreview =
     file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
 
-  // Handle the analysis process (form submission)
+  /**
+   * handleAnalysis
+   * Sends FormData to the server, then composes
+   * a well-structured Markdown report from the response.
+   */
   const handleAnalysis = async () => {
-    // Validate required fields
+    // Check for required fields
     if (!file) {
       setError("Please upload a medical image.");
       return;
     }
     if (!age || !sex) {
-      setError("Please provide the patient age and biological sex.");
+      setError("Please provide the patient's age and biological sex.");
       return;
     }
     const numericAge = parseInt(age, 10);
@@ -69,17 +85,56 @@ function UploadImage() {
     setReport("");
 
     try {
-      // Build FormData and append fields
+      // Build the form data
       const formData = new FormData();
       formData.append("file", file);
       formData.append("age", numericAge.toString());
       formData.append("sex", sex);
 
+      // Send to the backend
       const data = await analyzeImage(formData);
       console.log("Backend response:", data);
 
       if (data?.analysis) {
-        setReport(data.analysis);
+        // If the server returns raw text, you can parse it or unify it below:
+        const rawAnalysis = data.analysis.trim();
+
+        // Option 1: Use the server's text as-is, if it's already well structured:
+        // setReport(rawAnalysis);
+
+        // Option 2: Build a custom "structured" Markdown report:
+        const structuredReport = `
+# **AI Diagnostic Report**
+
+## **1. Image Characteristics (Certainty in %)**
+**Modality:**  
+_Replace with actual modality from server or fallback_
+
+**Quality:**  
+_Replace with actual quality metric from server_
+
+**Key Findings:**  
+_Replace with key findings from \`rawAnalysis\` or data object_
+
+## **2. Pattern Recognition (Certainty in %)**
+**Primary Patterns:**  
+_Replace with pattern details from \`rawAnalysis\` or data object_
+
+## **3. Clinical Considerations (Certainty in %)**
+**Next Steps:**  
+_List your suggestions, e.g. "Clinical correlation" or "Further imaging"_
+
+**Differentials:**  
+_Summarize potential differentials from your server data or a dictionary_
+
+## **4. Summary**
+${rawAnalysis}
+
+> *AI-generated analysis – Must be validated by a board-certified radiologist or pathologist*
+`;
+
+        // Finally set the structured markdown to state
+        setReport(structuredReport);
       } else if (data?.error) {
         setError(data.error);
       } else {
@@ -93,7 +148,10 @@ function UploadImage() {
     }
   };
 
-  // Handle report download as a Markdown file
+  /**
+   * handleDownloadReport
+   * Allows saving the final structured report as a .md file.
+   */
   const handleDownloadReport = () => {
     if (!report) {
       setError("No report available to download.");
@@ -110,7 +168,7 @@ function UploadImage() {
     URL.revokeObjectURL(url);
   };
 
-  // Simple Markdown renderer for the AI report
+  // A small component that renders Markdown text (with GFM support).
   const MedicalReportRenderer = ({ content }) => (
     <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
   );
@@ -122,7 +180,7 @@ function UploadImage() {
       </h1>
 
       <div className="space-y-6">
-        {/* Drag-and-Drop Zone */}
+        {/* Drag & Drop Zone */}
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
@@ -143,7 +201,7 @@ function UploadImage() {
           )}
         </div>
 
-        {/* Fallback Classic File Input */}
+        {/* Fallback: Classic File Input */}
         <div className="flex items-center justify-center">
           <p className="mr-2 text-sm text-gray-500 dark:text-gray-400">
             Or use the classic file chooser:
@@ -203,7 +261,7 @@ function UploadImage() {
           </div>
         </div>
 
-        {/* Analyze Button */}
+        {/* Analysis Button */}
         <button
           onClick={handleAnalysis}
           disabled={loading}
@@ -230,7 +288,7 @@ function UploadImage() {
           </div>
         )}
 
-        {/* AI Report Display */}
+        {/* Final AI Report Display */}
         {report && !error && (
           <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-md">
             <h2 className="text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400">
