@@ -2,17 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Overrides */
+/* 
+Global Overrides 
+----------------
+Provides base background and text colors in light mode and dark mode.
+*/
+
+/* Light Mode Defaults */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode Global Styles */
+/* Dark Mode: 
+   When the <html> element has class="dark", 
+   the body background & text color become dark-friendly.
+*/
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
 
-/* Headings Customization */
+/* Basic Headings Customization */
 h1, h2, h3, h4, h5, h6 {
   @apply font-bold tracking-tight;
 }
@@ -22,18 +31,17 @@ p {
   @apply m-0 mb-4;
 }
 
-/* Consistent Link Styling */
+/* Links: consistent in light or dark */
 a {
   @apply text-blue-600 hover:underline;
 }
 
-/* Additional Utility Examples */
-/* Ensure images are responsive */
+/* Images: fully responsive */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Standardize button styling */
+/* Buttons: remove outline + smooth color transitions */
 button {
   @apply focus:outline-none transition-colors;
 }
