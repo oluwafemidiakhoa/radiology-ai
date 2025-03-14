@@ -27,13 +27,12 @@ a {
   @apply text-blue-600 hover:underline;
 }
 
-/* Additional Utility Examples */
-/* Ensure images are responsive */
+/* Responsive Images */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Standardize button styling */
+/* Button Focus & Transition */
 button {
   @apply focus:outline-none transition-colors;
 }
