@@ -1,78 +1,83 @@
 """
-Evidence-based Clinical Guidelines for Medical Imaging, Cardiology, Oncology, and Histopathology (Updated)
+Ultra-Advanced Evidence-based Clinical Guidelines for Medical Imaging, Cardiology, Oncology, and Histopathology (Updated)
 
-This module provides concise summaries of key clinical guidelines from:
-- ACR (radiology/imaging)
-- ESC (cardiology)
-- NCCN (oncology)
-- Histopathology (newly added)
+This module provides concise, AI-ready guideline summaries sourced from:
+  - ACR (radiology/imaging)
+  - ESC (cardiology)
+  - NCCN (oncology)
+  - Histopathology (recently added)
 
-Guidelines for imaging have been reorganized by modality to support targeted application in an AI-driven diagnostic environment.
-Always consult the latest official guidelines for comprehensive clinical practice.
+Imaging guidelines are organized by modality for streamlined usage in AI-driven diagnostics. 
+Additional domain-specific guidelines, such as Cardiology (ESC) and Oncology (NCCN), are 
+embedded for end-to-end clinical coverage. 
+
+Always consult the latest official publications for comprehensive practice recommendations.
 """
 
 from typing import Dict, Any
 
-# Define modality-specific imaging guidelines and other clinical guidelines.
+###############################################################################
+# Comprehensive Dictionary of Evidence-based Guidelines
+###############################################################################
 evidence_based_guidelines: Dict[str, Any] = {
-    # Modality-specific imaging guidelines:
+    # Imaging guidelines by modality:
     "ChestXRay": {
         "ACR_ChestXRay": {
             "NormalChest": "Follow standard screening intervals unless clinical suspicion arises.",
-            "AbnormalChest": "If suspicious lesions are present, further evaluation with CT is recommended."
+            "AbnormalChest": "If suspicious lesions are present, further CT evaluation is recommended."
         }
     },
     "Mammogram": {
         "BI-RADS": {
-            "Category 0": "Incomplete - additional imaging evaluation is required.",
-            "Category 1": "Negative - routine screening is recommended.",
-            "Category 2": "Benign findings - continue routine screening.",
-            "Category 3": "Probably benign - short-interval follow-up (e.g., 6 months).",
-            "Category 4A": "Low suspicion for malignancy - consider biopsy.",
-            "Category 4B": "Intermediate suspicion for malignancy - biopsy recommended.",
-            "Category 4C": "Moderate concern for malignancy - biopsy recommended.",
-            "Category 5": "Highly suggestive of malignancy - prompt action required.",
-            "Category 6": "Known biopsy-proven malignancy - manage appropriately."
+            "Category 0": "Incomplete – additional imaging evaluation is required.",
+            "Category 1": "Negative – routine screening is recommended.",
+            "Category 2": "Benign findings – continue routine screening.",
+            "Category 3": "Probably benign – short-interval follow-up (e.g., 6 months).",
+            "Category 4A": "Low suspicion for malignancy – consider biopsy.",
+            "Category 4B": "Intermediate suspicion for malignancy – biopsy recommended.",
+            "Category 4C": "Moderate concern for malignancy – biopsy recommended.",
+            "Category 5": "Highly suggestive of malignancy – prompt action required.",
+            "Category 6": "Known biopsy-proven malignancy – manage appropriately."
         }
     },
-    # --------------------------------------------
-    # Newly added Histopathology guidelines section
-    # --------------------------------------------
+
+    # Newly introduced Histopathology guidelines:
     "Histopathology": {
         "General_Pathology": {
             "Tissue_Processing": (
                 "Standard formalin fixation and paraffin embedding. "
-                "Follow CAP guidelines for specimen handling and labeling."
+                "Adhere to CAP guidelines on specimen handling and labeling."
             ),
             "Microscopic_Evaluation": (
-                "Examine H&E-stained slides for cellular architecture, "
-                "nuclear features, and stromal changes. "
-                "Assess margins if relevant."
+                "H&E-stained slides for cellular architecture, nuclear characteristics, "
+                "and stromal alterations. Assess margins if applicable."
             ),
             "Immunohistochemistry": (
-                "Consider ER, PR, HER2, Ki-67, or other markers depending on suspected pathology. "
-                "Correlate with molecular or genetic tests when indicated."
+                "Employ ER, PR, HER2, Ki-67, or other markers based on suspected pathology. "
+                "Incorporate molecular or genetic tests where indicated."
             ),
             "Reporting_Standards": (
                 "Use standardized synoptic reporting for tumor type, grade, and stage. "
-                "Follow WHO classification and CAP protocols where applicable."
+                "WHO classification and CAP protocols are recommended practice."
             )
         }
     },
-    # General radiology protocols applicable across modalities
+
+    # General radiology protocols (trans-modality):
     "General_Radiology": {
         "CT_Protocols": [
-            "Appropriate use of contrast vs. non-contrast CT",
-            "Dose optimization per ALARA principle",
-            "Patient screening for renal function if contrast is used"
+            "Indications for contrast vs. non-contrast CT",
+            "Dose optimization using ALARA principles",
+            "Renal function screening if contrast is administered"
         ],
         "MRI_Protocols": [
-            "Screening for contraindications (e.g., pacemaker, certain implants)",
-            "Use of gadolinium-based contrast agents with renal function assessment",
-            "Tailoring pulse sequences to the suspected pathology"
+            "Pre-scan screening for pacemakers or metallic implants",
+            "Use gadolinium contrast with renal function assessment",
+            "Customize pulse sequences for the suspected pathology"
         ]
     },
-    # Cardiology guidelines remain under a dedicated key:
+
+    # Cardiology (ESC) guidelines:
     "Cardiology": {
         "ESC": {
             "ACS": {
@@ -86,8 +91,8 @@ evidence_based_guidelines: Dict[str, Any] = {
                     "P2Y12 inhibitors (Clopidogrel, Ticagrelor)",
                     "Heparin (LMWH or unfractionated)",
                     "Percutaneous coronary intervention (PCI)",
-                    "CABG (if indicated)",
-                    "Beta-blockers, ACE inhibitors, and Statins"
+                    "CABG if indicated",
+                    "Beta-blockers, ACE inhibitors, Statins"
                 ],
                 "Risk Stratification": [
                     "GRACE score",
@@ -103,9 +108,9 @@ evidence_based_guidelines: Dict[str, Any] = {
                 ],
                 "Treatment": [
                     "Anticoagulation (LMWH, DOACs, or unfractionated heparin)",
-                    "Thrombolysis (in massive or submassive PE with instability)",
-                    "Surgical embolectomy (rarely used)",
-                    "IVC filter (if anticoagulation is contraindicated)"
+                    "Thrombolysis in massive/submassive PE with instability",
+                    "Surgical embolectomy (rare cases)",
+                    "IVC filter (when anticoagulation is contraindicated)"
                 ],
                 "Prognosis": [
                     "Pulmonary Embolism Severity Index (PESI)",
@@ -114,35 +119,36 @@ evidence_based_guidelines: Dict[str, Any] = {
             },
             "Heart_Failure": {
                 "Diagnosis": [
-                    "Echocardiogram (assessment of ejection fraction)",
-                    "BNP or NT-proBNP levels",
-                    "Cardiac MRI if needed",
-                    "Stress test for ischemic workup"
+                    "Echocardiogram (determine ejection fraction)",
+                    "BNP or NT-proBNP",
+                    "Cardiac MRI if uncertain",
+                    "Stress testing for ischemic evaluation"
                 ],
                 "Treatment": [
                     "ACE inhibitors (or ARBs/ARNIs)",
                     "Beta-blockers",
                     "Diuretics (loop or thiazide)",
                     "Aldosterone antagonists",
-                    "SGLT2 inhibitors (newer guideline recommendations)",
-                    "ICD/CRT devices if indicated"
+                    "SGLT2 inhibitors (newer guidelines)",
+                    "ICD/CRT devices when indicated"
                 ],
                 "Follow-up": [
-                    "Regular monitoring of volume status, electrolytes, and renal function",
-                    "Optimization of guideline-directed medical therapy (GDMT)",
-                    "Cardiac rehabilitation in selected patients"
+                    "Monitor volume status, electrolytes, renal function",
+                    "Optimize guideline-directed medical therapy",
+                    "Cardiac rehabilitation in select cases"
                 ]
             }
         }
     },
-    # Oncology guidelines remain under a dedicated key:
+
+    # Oncology (NCCN) guidelines:
     "Oncology": {
         "NCCN": {
             "Breast_Cancer": {
                 "Screening": [
-                    "Annual mammography (age and risk dependent)",
+                    "Annual mammography (age- and risk-dependent)",
                     "Clinical breast exam",
-                    "MRI for high-risk individuals"
+                    "MRI for high-risk profiles"
                 ],
                 "Treatment": [
                     "Surgery (lumpectomy or mastectomy)",
@@ -150,7 +156,7 @@ evidence_based_guidelines: Dict[str, Any] = {
                     "Chemotherapy",
                     "Hormone therapy (e.g., Tamoxifen, Aromatase Inhibitors)",
                     "Targeted therapy (e.g., HER2 inhibitors)",
-                    "Immunotherapy (in selected cases)"
+                    "Immunotherapy (select cases)"
                 ]
             },
             "Lung_Cancer": {
@@ -160,24 +166,24 @@ evidence_based_guidelines: Dict[str, Any] = {
                     "Smoking cessation programs"
                 ],
                 "Treatment": [
-                    "Surgical resection (for early-stage NSCLC)",
-                    "Radiation therapy (curative or palliative)",
+                    "Surgical resection for early-stage NSCLC",
+                    "Radiation (curative or palliative intent)",
                     "Chemotherapy (platinum-based regimens)",
                     "Targeted therapy (EGFR, ALK inhibitors)",
-                    "Immunotherapy (PD-1/PD-L1 inhibitors)"
+                    "Immunotherapy (PD-1/PD-L1 blockade)"
                 ]
             },
             "Colorectal_Cancer": {
                 "Screening": [
-                    "Colonoscopy every 10 years starting at age 45–50",
-                    "FIT or FOBT yearly if colonoscopy is not performed",
-                    "CT Colonography (every 5 years)"
+                    "Colonoscopy every 10 years (start age 45–50)",
+                    "Fecal occult blood or FIT annually if colonoscopy not done",
+                    "CT Colonography every 5 years"
                 ],
                 "Treatment": [
-                    "Surgical resection of the primary tumor",
-                    "Adjuvant chemotherapy (stage-dependent)",
-                    "Radiation therapy (in rectal cancer settings)",
-                    "Targeted therapy (e.g., anti-VEGF or anti-EGFR agents)"
+                    "Surgical resection of the primary lesion",
+                    "Adjuvant chemotherapy (stage-specific)",
+                    "Radiation therapy (especially rectal cancers)",
+                    "Targeted therapy (e.g., anti-VEGF, anti-EGFR)"
                 ]
             }
         }
@@ -187,17 +193,19 @@ evidence_based_guidelines: Dict[str, Any] = {
 
 def get_guideline(organization: str, guideline_type: str) -> Any:
     """
-    Retrieve the guideline data for a given organization and guideline type.
+    Retrieves guideline data (dictionary, list, or string) for a given organization and guideline type.
 
     Args:
-        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram", "Histopathology").
-        guideline_type (str): The specific guideline type (e.g., "BI-RADS", "PE", "Breast_Cancer", "ACR_ChestXRay", "General_Pathology").
+        organization (str): Name of the guideline organization or imaging modality 
+                           (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram", "Histopathology").
+        guideline_type (str): Specific guideline type (e.g., "BI-RADS", "PE", "Breast_Cancer",
+                              "ACR_ChestXRay", "General_Pathology").
 
     Returns:
-        Any: The guideline data (dictionary, list, or str) for the specified organization and type.
+        Any: Dictionary, list, or string containing the specified guideline data.
 
     Raises:
-        KeyError: If the organization or guideline type is not found.
+        KeyError: If the requested organization or guideline type is not recognized.
     """
     try:
         return evidence_based_guidelines[organization][guideline_type]
@@ -209,16 +217,17 @@ def get_guideline(organization: str, guideline_type: str) -> Any:
 
 def list_guidelines(organization: str) -> Dict[str, Any]:
     """
-    List all guideline types for a given organization.
+    Lists all guideline types under a given organization or modality.
 
     Args:
-        organization (str): The guideline organization (e.g., "ACR", "ESC", "NCCN", "ChestXRay", "Mammogram", "Histopathology").
+        organization (str): The organization or modality key (e.g., "ACR", "ESC", "NCCN",
+                           "ChestXRay", "Mammogram", "Histopathology").
 
     Returns:
         Dict[str, Any]: A dictionary mapping each guideline type to its data.
 
     Raises:
-        KeyError: If the organization is not found.
+        KeyError: If the provided organization is not found.
     """
     try:
         return evidence_based_guidelines[organization]
