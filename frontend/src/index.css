@@ -2,38 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Overrides */
+/* Light mode defaults */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode Global Styles */
+/* Dark mode defaults explicitly set for visibility */
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
 
-/* Headings Customization */
+/* Typography styles */
 h1, h2, h3, h4, h5, h6 {
   @apply font-bold tracking-tight;
 }
 
-/* Paragraph Margins */
 p {
   @apply m-0 mb-4;
 }
 
-/* Consistent Link Styling */
 a {
-  @apply text-blue-600 hover:underline;
+  @apply text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline;
 }
 
-/* Additional Utility Examples */
-/* Ensure images are responsive */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Standardize button styling */
 button {
   @apply focus:outline-none transition-colors;
 }
