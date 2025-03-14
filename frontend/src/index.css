@@ -2,49 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light Mode Defaults */
+/* Global Overrides */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode Defaults - make sure HTML has class 'dark' when active */
+/* Dark Mode Global Styles */
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
 
-/* Headings customization */
+/* Headings Customization */
 h1, h2, h3, h4, h5, h6 {
   @apply font-bold tracking-tight;
 }
 
-/* Paragraphs for readability */
+/* Paragraph Margins */
 p {
-  @apply m-0 mb-4 text-gray-700 dark:text-gray-200;
+  @apply m-0 mb-4;
 }
 
-/* Links: clearly distinguishable in both modes */
+/* Consistent Link Styling */
 a {
-  @apply text-blue-600 dark:text-blue-400 hover:underline;
+  @apply text-blue-600 hover:underline;
 }
 
-/* Images: fully responsive */
+/* Additional Utility Examples */
+/* Ensure images are responsive */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Buttons: clearly visible in dark mode */
+/* Standardize button styling */
 button {
   @apply focus:outline-none transition-colors;
-}
-
-/* Custom input fields and select for visibility */
-input, select, textarea {
-  @apply bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600;
-}
-
-/* Dark mode customizations to enhance visibility */
-.dark {
-  --tw-bg-opacity: 1;
-  background-color: rgb(17 24 39 / var(--tw-bg-opacity)); /* Tailwind's gray-900 */
-  color: rgb(229 231 235); /* Tailwind's gray-200 for excellent readability */
 }
