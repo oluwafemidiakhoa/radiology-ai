@@ -1,13 +1,4 @@
-/**
- * @type {import('tailwindcss').Config}
- *
- * Tailwind Configuration for Dark Mode & Extended Styles
- * -------------------------------------------------------
- *  - Enables dark mode via the 'class' strategy
- *  - Watches files under ./src/ and ./public/ for Tailwind class usage
- *  - Extends the default theme with custom colors, fonts, etc.
- *  - Registers Tailwind Forms and Typography plugins
- */
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Dark mode toggled by adding "dark" class to the HTML element
   content: [
@@ -17,7 +8,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Extend default Tailwind colors
         diagnostic: {
           blue: {
             50: '#ebf5ff',
@@ -34,6 +24,7 @@ module.exports = {
           red: '#dc2626',
           highlight: '#22c55e',
         },
+        brandDark: '#1A1A1A',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -47,17 +38,21 @@ module.exports = {
             h1: { color: theme('colors.diagnostic.blue.800') },
             h2: { color: theme('colors.diagnostic.blue.700') },
             h3: { color: theme('colors.diagnostic.blue.600') },
-            strong: { color: theme('colors.diagnostic.blue.900') },
-            'ul > li::before': { backgroundColor: theme('colors.diagnostic.blue.500') },
+            strong: { color: theme('colors.diagnostic.blue.800') },
+            a: { color: theme('colors.diagnostic.blue.700') },
+            ul: { color: theme('colors.gray.700') },
 
-            // Dark mode overrides
             '.dark &': {
               color: theme('colors.gray.200'),
               h1: { color: theme('colors.diagnostic.blue.200') },
               h2: { color: theme('colors.diagnostic.blue.300') },
               h3: { color: theme('colors.diagnostic.blue.400') },
-              strong: { color: theme('colors.diagnostic.blue.100') },
-              'ul > li::before': { backgroundColor: theme('colors.diagnostic.blue.300') },
+              strong: { color: theme('colors.diagnostic.blue.300') },
+              a: { color: theme('colors.diagnostic.blue.400') },
+              ul: { color: theme('colors.gray.300') },
+              li: { color: theme('colors.gray.200') },
+              code: { color: theme('colors.diagnostic.red') },
+              blockquote: { color: theme('colors.gray.300') },
             },
           },
         },
@@ -72,4 +67,4 @@ module.exports = {
       className: 'medical-prose',
     }),
   ],
-};
+};  
