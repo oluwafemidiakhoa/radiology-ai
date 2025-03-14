@@ -1,13 +1,18 @@
 """
-Advanced Radiology Differential Diagnosis Module
+Ultra-Advanced Radiology Differential Diagnosis Module
 
-This module defines a structured representation of radiology differential diagnoses 
-using Python dataclasses. It covers advanced diagnostic considerations for pulmonary,
-neurological, and musculoskeletal conditions encountered in radiology. For each condition,
-the module provides detailed imaging descriptors, risk factors, epidemiology, clinical correlations, 
-recommendations, recent research findings, and machine learning insights.
+Provides an enterprise-ready, dataclass-driven representation of differential diagnoses
+for key radiological conditions across Pulmonary, Neurological, and Musculoskeletal domains.
+Each entry details imaging descriptors, risk factors, epidemiology, clinical correlations,
+recommendations, current research, and machine learning insights. 
 
-Helper functions allow retrieval of specific differentials or listing of all available entries.
+Helper functions allow retrieval of specific differentials by category and condition,
+or listing all available entries for broader usage.
+
+Potential Use Cases:
+    - Integration in hospital PACS/EHR systems for real-time AI-based decision support.
+    - ML workflow enhancement with curated features and references (e.g., ground-glass opacities).
+    - Academic or research platforms requiring standardized references on advanced radiological findings.
 """
 
 from dataclasses import dataclass, asdict, field
@@ -15,6 +20,16 @@ from typing import List, Dict
 
 @dataclass
 class RadiologyDifferential:
+    """
+    Encapsulates the complete diagnostic profile for a radiological condition, including:
+      - Imaging Descriptors (key morphological or sign-based observations)
+      - Risk Factors (lifestyle, genetic, environmental)
+      - Epidemiology (prevalence, significant subgroups)
+      - Clinical Diagnostic Correlations (signs, labs, physical exam clues)
+      - Recommendations (diagnostic imaging steps, therapeutic pointers)
+      - Recent Research (cutting-edge discoveries or trials)
+      - ML Insights (emerging AI/ML trends relevant to diagnosis or classification)
+    """
     imaging_descriptors: List[str] = field(default_factory=list)
     risk_factors: List[str] = field(default_factory=list)
     epidemiology: str = ""
@@ -24,11 +39,17 @@ class RadiologyDifferential:
     ml_insights: str = ""
 
     def to_dict(self) -> Dict:
-        """Convert the radiology differential entry into a dictionary."""
+        """
+        Serializes this differential entry into a dictionary, allowing seamless
+        integration into JSON-based APIs, data pipelines, or logging systems.
+        """
         return asdict(self)
 
     def formatted_summary(self) -> str:
-        """Return a formatted multi-line summary of the differential diagnosis."""
+        """
+        Creates a multi-line string summarizing all non-empty fields, making it well-suited
+        for human review in a CLI, web UI, or reporting utility.
+        """
         parts = []
         if self.imaging_descriptors:
             parts.append("Imaging Descriptors:\n  - " + "\n  - ".join(self.imaging_descriptors))
@@ -37,7 +58,8 @@ class RadiologyDifferential:
         if self.epidemiology:
             parts.append(f"Epidemiology:\n  {self.epidemiology}")
         if self.clinical_diagnostic_correlations:
-            parts.append("Clinical Diagnostic Correlations:\n  - " + "\n  - ".join(self.clinical_diagnostic_correlations))
+            parts.append("Clinical Diagnostic Correlations:\n  - " 
+                         + "\n  - ".join(self.clinical_diagnostic_correlations))
         if self.recommendations:
             parts.append("Recommendations:\n  - " + "\n  - ".join(self.recommendations))
         if self.recent_research:
@@ -47,7 +69,9 @@ class RadiologyDifferential:
         return "\n\n".join(parts)
 
 
-# Define the radiology differentials organized by category.
+###############################################################################
+# Radiology Differentials Organized by Category
+###############################################################################
 radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
     "Pulmonary": {
         "Pneumonia": RadiologyDifferential(
@@ -56,7 +80,7 @@ radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
                 "Multifocal infiltrates",
                 "Air bronchograms",
                 "Ground-glass opacity",
-                "Interstitial thickening"  # Advanced descriptor for atypical/viral pneumonia
+                "Interstitial thickening"
             ],
             risk_factors=[
                 "Advanced age",
@@ -64,311 +88,338 @@ radiology_differentials: Dict[str, Dict[str, RadiologyDifferential]] = {
                 "Chronic lung disease",
                 "Smoking",
                 "Aspiration",
-                "Recent viral infection"  # Post-COVID-19 observations
+                "Recent viral infection"
             ],
-            epidemiology="High prevalence during winter; emerging data indicate increased incidence in post-viral settings.",
+            epidemiology=(
+                "High prevalence in winter months; notable post-viral occurrences, especially post-COVID-19."
+            ),
             clinical_diagnostic_correlations=[
                 "Fever",
-                "Cough",
-                "Purulent sputum",
+                "Cough (often productive)",
                 "Elevated WBC count",
                 "Positive sputum culture",
                 "CRP elevation",
-                "Procalcitonin levels"  # Laboratory marker for bacterial infection
+                "Procalcitonin"
             ],
             recommendations=[
-                "Chest X-ray",
-                "CT Chest (if X-ray is inconclusive or for suspected viral pneumonia)",
-                "Sputum culture",
-                "Blood cultures",
-                "Empiric then targeted antibiotic therapy",
-                "Supportive care (oxygen, hydration)",
-                "Consider viral panel or PCR testing for influenza/COVID-19"
+                "Chest X-ray as first-line imaging",
+                "CT Chest for further evaluation of atypical cases",
+                "Sputum culture & blood cultures",
+                "Empiric or targeted antibiotic therapy",
+                "Supportive care (oxygen, IV fluids)"
             ],
-            recent_research="Recent studies indicate the utility of AI-enhanced CT imaging to differentiate bacterial from viral pneumonia.",
-            ml_insights="Integration of deep learning models has improved classification accuracy by up to 15% in recent trials."
+            recent_research=(
+                "AI-augmented CT algorithms show promise in distinguishing bacterial from viral etiologies."
+            ),
+            ml_insights=(
+                "Deep learning classification models can raise diagnostic accuracy by an additional 15%."
+            )
         ),
         "Pulmonary Embolism": RadiologyDifferential(
             imaging_descriptors=[
                 "Wedge-shaped opacity (Hampton's hump)",
                 "Vascular cutoff",
                 "Enlarged pulmonary artery",
-                "Right heart strain (RV/LV ratio > 1)",
+                "Right heart strain on CT",
                 "Pleural effusion",
-                "Mosaic attenuation pattern",
+                "Mosaic attenuation",
                 "Filling defects on CT Pulmonary Angiography"
             ],
             risk_factors=[
-                "Immobility",
-                "Recent surgery",
-                "Trauma",
-                "Cancer",
-                "Oral contraceptives",
-                "Hormone replacement therapy",
+                "Prolonged immobility",
+                "Recent surgery/trauma",
+                "Cancer or thrombophilia",
+                "Hormone therapy (oral contraceptives/HRT)",
                 "Pregnancy",
-                "Inherited thrombophilia"
+                "Obesity"
             ],
-            epidemiology="Moderate prevalence; a leading cause of preventable mortality in hospitalized patients.",
+            epidemiology=(
+                "Moderate prevalence and a top cause of preventable mortality in hospitalized patients."
+            ),
             clinical_diagnostic_correlations=[
-                "Sudden onset dyspnea",
+                "Acute dyspnea",
                 "Pleuritic chest pain",
                 "Tachycardia",
                 "Hypoxia",
                 "D-dimer elevation",
-                "Wells score assessment"
+                "Wells score usage"
             ],
             recommendations=[
                 "CT Pulmonary Angiography (CTPA)",
-                "Ventilation/Perfusion (V/Q) scan (if CTPA is contraindicated)",
-                "Pulmonary angiography (rarely used)",
-                "ECG",
-                "Echocardiogram (to assess right heart strain)",
-                "Anticoagulation (LMWH, unfractionated heparin, DOACs)",
-                "Thrombolysis (in severe cases)",
-                "Embolectomy (rarely used)"
+                "V/Q scan if CTPA contraindicated",
+                "Anticoagulation (LMWH, heparin, DOACs)",
+                "Thrombolysis in massive PE",
+                "Mechanical embolectomy in critical scenarios"
             ],
-            recent_research="AI-driven analysis of CTPA images has shown promising results in early PE detection.",
-            ml_insights="Deep learning segmentation algorithms have improved clot detection and quantification."
+            recent_research=(
+                "AI-based detection on CTPA images reduces time to diagnosis, especially in high-volume centers."
+            ),
+            ml_insights=(
+                "Deep learning segmentation tools enhance clot localization/quantification for risk stratification."
+            )
         ),
         "Lung Cancer": RadiologyDifferential(
             imaging_descriptors=[
                 "Solitary pulmonary nodule",
-                "Mass with irregular borders",
+                "Irregular mass borders",
                 "Hilar or mediastinal lymphadenopathy",
                 "Pleural effusion",
                 "Atelectasis",
-                "Rib destruction",
-                "Ground-glass opacity with spiculation"  # Indicative of early adenocarcinoma
+                "Rib invasion/destruction",
+                "Spiculated ground-glass opacity"
             ],
             risk_factors=[
                 "Smoking",
                 "Radon exposure",
-                "Asbestos exposure",
-                "Family history",
-                "Air pollution",
-                "Previous lung infections"
+                "Asbestos",
+                "Occupational hazards",
+                "Chronic lung infections",
+                "Family history"
             ],
-            epidemiology="Leading cause of cancer death worldwide; molecular subtyping now guides management.",
+            epidemiology=(
+                "Leading cause of cancer-related mortality worldwide; molecular profiling now shapes therapy."
+            ),
             clinical_diagnostic_correlations=[
                 "Chronic cough",
                 "Hemoptysis",
-                "Weight loss",
-                "Shortness of breath",
-                "Chest pain",
-                "Fatigue"
+                "Unintentional weight loss",
+                "Dyspnea",
+                "Chest pain"
             ],
             recommendations=[
-                "Chest CT scan",
-                "PET/CT scan",
-                "Bronchoscopy with biopsy",
-                "CT-guided biopsy",
-                "Surgical resection",
-                "Chemotherapy",
-                "Radiation therapy",
-                "Immunotherapy",
-                "Molecular profiling"
+                "High-resolution CT chest",
+                "PET/CT for staging",
+                "Bronchoscopy or CT-guided biopsy",
+                "Surgical resection if localized",
+                "Chemotherapy, radiation, or immunotherapy (advanced disease)",
+                "Targeted therapy if actionable mutations"
             ],
-            recent_research="Recent advances in liquid biopsy and AI-based image analysis are revolutionizing early lung cancer detection.",
-            ml_insights="Hybrid CNN architectures have achieved significant improvements in nodule classification accuracy."
+            recent_research=(
+                "Liquid biopsy and AI-based imaging analytics are pushing earlier detection and personalized protocols."
+            ),
+            ml_insights=(
+                "Hybrid CNN architectures excel at classifying nodule malignancy, achieving high AUC scores."
+            )
         ),
         "COPD (Chronic Obstructive Pulmonary Disease)": RadiologyDifferential(
             imaging_descriptors=[
-                "Hyperinflation",
-                "Flattened diaphragm",
+                "Hyperinflated lungs",
+                "Flattened diaphragms",
                 "Increased retrosternal air space",
-                "Bullae",
+                "Bullae formation",
                 "Thickened bronchial walls",
                 "Centrilobular emphysema"
             ],
             risk_factors=[
                 "Smoking",
                 "Alpha-1 antitrypsin deficiency",
-                "Air pollution",
-                "Occupational exposures"
+                "Industrial pollutants",
+                "Chronic occupational exposure"
             ],
-            epidemiology="Common chronic respiratory disease with increasing prevalence worldwide.",
+            epidemiology=(
+                "Common chronic respiratory ailment globally, trending upward with aging demographics."
+            ),
             clinical_diagnostic_correlations=[
-                "Chronic cough",
-                "Sputum production",
-                "Shortness of breath",
-                "Wheezing",
-                "Decreased FEV1/FVC ratio on spirometry"
+                "Chronic cough with sputum",
+                "Shortness of breath on exertion",
+                "Decreased FEV1/FVC on spirometry"
             ],
             recommendations=[
                 "Pulmonary function tests (spirometry)",
-                "Chest X-ray",
-                "CT scan for detailed assessment of emphysema and bronchiectasis",
-                "Bronchodilator therapy",
+                "Chest X-ray or CT for structural damage",
+                "Bronchodilators",
                 "Inhaled corticosteroids",
-                "Pulmonary rehabilitation",
-                "Oxygen therapy (if hypoxemic)"
+                "Oxygen therapy (if hypoxic)"
             ],
-            recent_research="Integration of AI with spirometry data has enhanced early detection and monitoring of COPD progression.",
-            ml_insights="Predictive models now provide personalized risk assessments based on imaging and clinical data."
+            recent_research=(
+                "AI-driven spirometry integration increases early detection rates, optimizing management."
+            ),
+            ml_insights=(
+                "Predictive analytics fusing imaging & clinical data provide personalized risk/progression evaluations."
+            )
         )
     },
     "Neurological": {
         "Stroke": RadiologyDifferential(
             imaging_descriptors=[
-                "Hyperdense vessel sign (acute thrombus)",
+                "Hyperdense artery sign",
                 "Loss of gray-white differentiation",
-                "Sulcal effacement, cytotoxic edema",
-                "Diffusion restriction on MRI",
+                "Sulcal effacement",
+                "Diffusion restriction on DWI",
                 "Hemorrhagic transformation"
             ],
             risk_factors=[
                 "Hypertension",
                 "Hyperlipidemia",
-                "Diabetes mellitus",
+                "Diabetes",
                 "Smoking",
                 "Atrial fibrillation",
-                "Carotid artery stenosis",
+                "Carotid stenosis",
                 "Family history"
             ],
-            epidemiology="Very high prevalence; one of the leading causes of long-term disability and death.",
+            epidemiology=(
+                "Extremely high incidence globally; top cause of serious long-term disability and mortality."
+            ),
             clinical_diagnostic_correlations=[
-                "Sudden onset neurological deficits",
-                "NIH Stroke Scale assessment",
-                "FAST exam (Face, Arms, Speech, Time)"
+                "Acute focal neurologic deficits",
+                "NIH Stroke Scale for severity",
+                "FAST exam"
             ],
             recommendations=[
-                "Non-contrast CT of the brain",
-                "CT Angiography (CTA) for vascular assessment",
-                "MRI with DWI for early ischemic changes",
-                "ECG to detect atrial fibrillation",
-                "Blood glucose monitoring",
-                "Thrombolytic therapy if within the treatment window",
-                "Mechanical thrombectomy for large vessel occlusion",
-                "Antiplatelet therapy and blood pressure management"
+                "Non-contrast CT brain for initial hemorrhage/ischemia",
+                "CT/MR angiography for vessel patency",
+                "MRI (DWI) for ischemic core detection",
+                "Thrombolysis if within the therapeutic window",
+                "Mechanical thrombectomy in large vessel occlusion"
             ],
-            recent_research="Recent trials emphasize the benefits of endovascular thrombectomy in select patient populations.",
-            ml_insights="AI algorithms can now rapidly quantify infarct volume and predict functional outcomes."
+            recent_research=(
+                "Extended windows for endovascular therapy validated by recent clinical trials in specific patients."
+            ),
+            ml_insights=(
+                "AI-driven perfusion imaging speeds triage and improves outcome predictions in acute strokes."
+            )
         ),
         "Brain Tumor": RadiologyDifferential(
             imaging_descriptors=[
-                "Mass lesion with surrounding edema",
-                "Contrast enhancement",
+                "Intracranial mass with surrounding edema",
+                "Irregular contrast enhancement",
                 "Midline shift",
                 "Hydrocephalus",
-                "Intracranial hemorrhage"
+                "Possible hemorrhagic components"
             ],
             risk_factors=[
-                "Genetic syndromes (e.g., Neurofibromatosis, Tuberous sclerosis)",
-                "Exposure to ionizing radiation"
+                "Genetic syndromes (Neurofibromatosis, Tuberous sclerosis)",
+                "Ionizing radiation exposure"
             ],
-            epidemiology="Relatively rare but with high clinical impact when present.",
+            epidemiology="Less common than metastatic brain tumors but often higher impact when symptomatic.",
             clinical_diagnostic_correlations=[
-                "Headaches",
+                "Chronic headaches",
                 "Seizures",
-                "Focal neurological deficits",
-                "Papilledema",
-                "Cognitive changes"
+                "Neurological deficits",
+                "Cognitive changes",
+                "Papilledema"
             ],
             recommendations=[
-                "MRI of the brain with and without contrast",
-                "Surgical biopsy or resection",
+                "MRI brain with and without contrast",
+                "Stereotactic biopsy or resection",
                 "Radiation therapy",
                 "Chemotherapy",
-                "Adjunctive steroid therapy to reduce edema"
+                "Steroids to reduce intracranial pressure"
             ],
-            recent_research="Advanced imaging biomarkers are emerging to predict tumor aggressiveness.",
-            ml_insights="Deep learning models have improved segmentation accuracy for brain tumors, aiding in surgical planning."
+            recent_research=(
+                "Molecular markers (e.g., IDH status, MGMT promoter methylation) increasingly guide therapy."
+            ),
+            ml_insights=(
+                "Deep learning tumor segmentation tools enhance surgical planning and prognosis estimation."
+            )
         ),
         "Multiple Sclerosis (MS)": RadiologyDifferential(
             imaging_descriptors=[
-                "Ovoid periventricular lesions",
-                "Dawson's fingers (lesions perpendicular to ventricles)",
-                "Enhancing lesions indicating active inflammation",
-                "Spinal cord lesions"
+                "Periventricular ovoid lesions (Dawson's fingers)",
+                "Active enhancing lesions",
+                "Spinal cord plaques",
+                "Occasional black holes on T1-weighted MRI"
             ],
             risk_factors=[
-                "Genetic predisposition",
+                "Autoimmune predisposition",
                 "Vitamin D deficiency",
-                "Epstein-Barr virus infection",
+                "EBV exposure",
                 "Smoking"
             ],
-            epidemiology="More common in women and in temperate climates.",
+            epidemiology=(
+                "More frequent in young adults, particularly females, with variable global distributions."
+            ),
             clinical_diagnostic_correlations=[
                 "Optic neuritis",
                 "Transverse myelitis",
-                "Lhermitte's sign",
-                "Chronic fatigue",
-                "Sensory and motor deficits"
+                "Fatigue",
+                "Motor/sensory deficits"
             ],
             recommendations=[
-                "MRI of the brain and spinal cord with and without contrast",
-                "Lumbar puncture for oligoclonal bands",
-                "Visual evoked potentials (VEPs)",
-                "Initiate disease-modifying therapies (DMTs)",
-                "Symptomatic treatment"
+                "MRI brain/spinal cord with Gadolinium",
+                "Lumbar puncture for CSF oligoclonal bands",
+                "Disease-modifying therapies (DMTs)",
+                "Symptomatic treatments for spasticity, fatigue"
             ],
-            recent_research="Novel biomarkers and advanced MRI sequences are being integrated for earlier diagnosis.",
-            ml_insights="Machine learning has enabled automated lesion segmentation and volumetric analysis in MS patients."
+            recent_research=(
+                "Advanced MRI sequences and biomarkers enhance early detection and refine treatment efficacy."
+            ),
+            ml_insights=(
+                "AI-driven lesion segmentation and volumetric analysis accelerate management decisions."
+            )
         )
     },
     "Musculoskeletal": {
         "Fracture": RadiologyDifferential(
             imaging_descriptors=[
-                "Discontinuity of the bone cortex",
-                "Visible fracture line",
-                "Displacement of bone fragments",
+                "Cortical discontinuity",
+                "Fracture line (visible or occult)",
+                "Displacement of fragments",
                 "Associated soft tissue swelling"
             ],
             risk_factors=[
                 "Trauma",
                 "Osteoporosis",
-                "Age-related degeneration",
+                "High-impact sports",
                 "Repetitive stress",
-                "Underlying bone pathology"
+                "Pathologic process in bone"
             ],
-            epidemiology="Very common in elderly populations and athletes.",
+            epidemiology=(
+                "Very common in geriatric populations and in athletic or accident-prone contexts."
+            ),
             clinical_diagnostic_correlations=[
-                "Localized pain",
-                "Swelling",
-                "Deformity",
-                "Limited range of motion",
-                "Tenderness"
+                "Local pain/tenderness",
+                "Swelling and deformity",
+                "Reduced function or mobility"
             ],
             recommendations=[
-                "Plain X-ray for initial evaluation",
-                "CT scan for detailed fracture assessment",
-                "MRI if soft tissue injury is suspected",
-                "Immobilization (casting or splinting)",
-                "Analgesia and pain management",
-                "Surgical fixation for unstable fractures"
+                "Plain X-ray to confirm",
+                "CT for complex fractures",
+                "MRI if occult fracture suspected",
+                "Immobilization (casting, bracing)",
+                "Surgical fixation in unstable cases"
             ],
-            recent_research="Innovative 3D imaging and AI-driven fracture detection are improving diagnostic accuracy.",
-            ml_insights="Deep neural networks now assist radiologists by highlighting subtle fracture lines that may be missed on plain films."
+            recent_research=(
+                "3D printing and AI-driven fracture detection are revolutionizing pre-surgical planning."
+            ),
+            ml_insights=(
+                "Neural networks highlight subtle fractures often missed, substantially reducing diagnostic errors."
+            )
         )
     }
 }
 
+
 def get_radiology_differential(category: str, condition: str) -> RadiologyDifferential:
     """
-    Retrieve the radiology differential for a given category and condition.
+    Retrieves the corresponding radiology differential by specifying both a domain category (e.g., 'Pulmonary')
+    and a condition (e.g., 'Pneumonia').
 
     Args:
         category (str): The radiology category (e.g., "Pulmonary").
-        condition (str): The specific condition (e.g., "Pneumonia").
+        condition (str): The condition within that category (e.g., "Pneumonia").
 
     Returns:
-        RadiologyDifferential: The differential diagnosis data for the specified condition.
+        RadiologyDifferential: A comprehensive data object covering imaging descriptors, 
+        risk factors, epidemiology, and more.
 
     Raises:
-        KeyError: If the category or condition is not available.
+        KeyError: If the specified category or condition does not exist in the dataset.
     """
     try:
         return radiology_differentials[category][condition]
     except KeyError as e:
-        raise KeyError(f"No radiology differential found for category '{category}' and condition '{condition}'.") from e
+        raise KeyError(
+            f"No radiology differential found for category '{category}' and condition '{condition}'."
+        ) from e
 
 def list_radiology_differentials() -> Dict[str, Dict[str, RadiologyDifferential]]:
     """
-    List all available radiology differentials organized by category.
+    Enumerates all defined radiology differentials, organized by category and condition,
+    in a shallow-copied dictionary to prevent accidental external mutation.
 
     Returns:
-        Dict[str, Dict[str, RadiologyDifferential]]: A nested dictionary mapping categories
-        to condition names and their corresponding differential data.
+        Dict[str, Dict[str, RadiologyDifferential]]: Nested dictionary reflecting categories
+        and their specific condition-based differentials.
     """
-    # Return a shallow copy to prevent accidental mutation.
     return {cat: diff.copy() for cat, diff in radiology_differentials.items()}
