@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class', // Dark mode toggled by adding "dark" class to the HTML element
+  darkMode: 'class', // Dark mode toggled via 'dark' class
   content: [
     "./src/**/*.{js,jsx,ts,tsx,html}",
     "./public/index.html",
@@ -24,7 +24,6 @@ module.exports = {
           red: '#dc2626',
           highlight: '#22c55e',
         },
-        brandDark: '#1A1A1A',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -35,36 +34,34 @@ module.exports = {
         DEFAULT: {
           css: {
             color: theme('colors.gray.800'),
-            h1: { color: theme('colors.diagnostic.blue.800') },
-            h2: { color: theme('colors.diagnostic.blue.700') },
+            h1: { color: theme('colors.diagnostic.blue.700') },
+            h2: { color: theme('colors.diagnostic.blue.600') },
             h3: { color: theme('colors.diagnostic.blue.600') },
-            strong: { color: theme('colors.diagnostic.blue.800') },
+            strong: { color: theme('colors.gray.800') },
             a: { color: theme('colors.diagnostic.blue.700') },
             ul: { color: theme('colors.gray.700') },
 
+            // Dark mode overrides for typography
             '.dark &': {
               color: theme('colors.gray.200'),
               h1: { color: theme('colors.diagnostic.blue.200') },
               h2: { color: theme('colors.diagnostic.blue.300') },
               h3: { color: theme('colors.diagnostic.blue.400') },
-              strong: { color: theme('colors.diagnostic.blue.300') },
-              a: { color: theme('colors.diagnostic.blue.400') },
-              ul: { color: theme('colors.gray.300') },
+              strong: { color: theme('colors.gray.200') },
+              a: { color: theme('colors.diagnostic.blue.300') },
+              ul: { color: theme('colors.gray.200') },
               li: { color: theme('colors.gray.200') },
               code: { color: theme('colors.diagnostic.red') },
-              blockquote: { color: theme('colors.gray.300') },
+              blockquote: { color: theme('colors.gray.200') },
             },
-          },
         },
       }),
-    },
+    }),
   },
   plugins: [
     require('@tailwindcss/forms')({
       strategy: 'class',
     }),
-    require('@tailwindcss/typography')({
-      className: 'medical-prose',
-    }),
+    require('@tailwindcss/typography'),
   ],
-};  
+};
