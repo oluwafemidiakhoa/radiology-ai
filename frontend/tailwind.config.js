@@ -1,26 +1,23 @@
-/** 
- * @type {import('tailwindcss').Config} 
+/**
+ * @type {import('tailwindcss').Config}
  *
  * Tailwind Configuration for Dark Mode & Extended Styles
  * -------------------------------------------------------
  *  - Enables dark mode via the 'class' strategy
- *  - Monitors files under ./src/ and ./public/ for Tailwind utility usage
+ *  - Watches files under ./src/ and ./public/ for Tailwind class usage
  *  - Extends the default theme with custom colors, fonts, etc.
- *  - Registers Tailwind Forms and Typography plugins for more versatile UI creation
+ *  - Registers Tailwind Forms and Typography plugins
  */
 module.exports = {
-  darkMode: 'class',  // Activates dark mode by adding/removing the "dark" class
+  darkMode: 'class', // Dark mode toggled by adding "dark" class to the HTML element
   content: [
     "./src/**/*.{js,jsx,ts,tsx,html}",
     "./public/index.html",
   ],
   theme: {
     extend: {
-      // Optionally import the entire Tailwind color palette for usage
       colors: {
-        ...require('tailwindcss/colors'),
-
-        // Example custom color group: "diagnostic"
+        // Extend default Tailwind colors
         diagnostic: {
           blue: {
             50: '#ebf5ff',
@@ -38,25 +35,39 @@ module.exports = {
           highlight: '#22c55e',
         },
       },
-
-      // Add custom font families beyond the defaults
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         heading: ['Poppins', 'system-ui', 'sans-serif'],
         medical: ['Lato', 'system-ui', 'sans-serif'],
       },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            color: theme('colors.gray.800'),
+            h1: { color: theme('colors.diagnostic.blue.800') },
+            h2: { color: theme('colors.diagnostic.blue.700') },
+            h3: { color: theme('colors.diagnostic.blue.600') },
+            strong: { color: theme('colors.diagnostic.blue.900') },
+            'ul > li::before': { backgroundColor: theme('colors.diagnostic.blue.500') },
 
-      // Additional theme extensions can go here
-      // e.g., spacing, shadows, transitions, etc.
+            // Dark mode overrides
+            '.dark &': {
+              color: theme('colors.gray.200'),
+              h1: { color: theme('colors.diagnostic.blue.200') },
+              h2: { color: theme('colors.diagnostic.blue.300') },
+              h3: { color: theme('colors.diagnostic.blue.400') },
+              strong: { color: theme('colors.diagnostic.blue.100') },
+              'ul > li::before': { backgroundColor: theme('colors.diagnostic.blue.300') },
+            },
+          },
+        },
+      }),
     },
   },
   plugins: [
-    // Tailwind Forms: improved form styling with a "class" strategy
     require('@tailwindcss/forms')({
       strategy: 'class',
     }),
-
-    // Tailwind Typography: advanced text formatting (e.g., for Markdown)
     require('@tailwindcss/typography')({
       className: 'medical-prose',
     }),
