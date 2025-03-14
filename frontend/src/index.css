@@ -1,21 +1,24 @@
+/* -------------------------------------------------------
+  Tailwind CSS Base, Components, and Utilities
+-------------------------------------------------------- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 
-Global Overrides 
-----------------
-Provides base background and text colors in light mode and dark mode.
-*/
+/* -------------------------------------------------------
+  Global Overrides 
+  - Manages default backgrounds, text colors, and spacing
+    for both light mode and dark mode.
+-------------------------------------------------------- */
 
 /* Light Mode Defaults */
 body {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Dark Mode: 
-   When the <html> element has class="dark", 
-   the body background & text color become dark-friendly.
+/* Dark Mode:
+   Activates whenever the <html> element contains .dark 
+   (based on Tailwind's darkMode: "class" config).
 */
 .dark body {
   @apply bg-gray-900 text-gray-100;
@@ -26,22 +29,25 @@ h1, h2, h3, h4, h5, h6 {
   @apply font-bold tracking-tight;
 }
 
-/* Paragraph Margins */
+/* Default Paragraph Margins */
 p {
   @apply m-0 mb-4;
 }
 
-/* Links: consistent in light or dark */
+/* Anchor Tags: consistent styling in both modes */
 a {
   @apply text-blue-600 hover:underline;
 }
 
-/* Images: fully responsive */
+/* Images: fully responsive, maintaining aspect ratio */
 img {
   @apply max-w-full h-auto;
 }
 
-/* Buttons: remove outline + smooth color transitions */
+/* Buttons:
+   - Remove focus outlines
+   - Smooth color transitions for hover/focus states
+*/
 button {
   @apply focus:outline-none transition-colors;
 }
