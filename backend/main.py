@@ -16,9 +16,10 @@ from typing import Tuple, Optional, List, Dict, Any
 
 import numpy as np
 import pydicom
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError, ImageFilter
 import httpx
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
@@ -50,7 +51,6 @@ except ImportError as e:
 # Extract references from the unified dictionary
 # This dictionary includes Radiology, Oncology, Cardiology, and Guidelines keys.
 evidence_based_guidelines = medical_differentials.get("Guidelines", {})
-# The "Radiology" key, for instance, is medical_differentials["Radiology"].
 
 # PubMed fetching function (synchronous) from pubmed.py
 from pubmed import fetch_pubmed_articles_sync
@@ -116,6 +116,7 @@ def adaptive_prompt(metadata: Dict[str, Any], ladder_result: str) -> List[Dict[s
     """
     Dynamically generates the AI prompt messages by incorporating extra metadata
     (e.g., patient age, sex) and the preliminary CNN diagnosis.
+    Assumes that 'system_prompt' is defined globally.
     """
     additional_context = ""
     if "age" in metadata:
@@ -123,11 +124,7 @@ def adaptive_prompt(metadata: Dict[str, Any], ladder_result: str) -> List[Dict[s
     if "sex" in metadata:
         additional_context += f" Patient sex: {metadata['sex']}."
     # Add additional multi-modal data if available.
-    base_prompt = (
-        "Analyze this medical image. "
-        "Preliminary CNN diagnosis: " + ladder_result + "."
-        + additional_context
-    )
+    base_prompt = f"Analyze this medical image. Preliminary CNN diagnosis: {ladder_result}.{additional_context}"
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": [
@@ -172,7 +169,6 @@ def uncertainty_alert(confidence: float, variance: float, threshold: float = 0.1
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from PIL import ImageFilter
 
 class LADDERImageDiagnosisAdvanced:
     def __init__(self, device: str = "cpu", domain: Optional[str] = None):
