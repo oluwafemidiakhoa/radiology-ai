@@ -228,7 +228,6 @@ def encode_image_to_data_url(image: Image.Image) -> str:
     img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{img_b64}"
 
-
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """
     Checks essential DICOM fields and raises an HTTPException if missing.
@@ -241,7 +240,6 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
             status_code=400,
             detail=f"Incomplete DICOM metadata: {', '.join(missing)}"
         )
-
 
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """
@@ -257,9 +255,13 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             pixel_array = dicom_obj.pixel_array
             norm_array = ((pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255).astype(np.uint8)
             image = Image.fromarray(norm_array)
+            # Convert DICOM image to RGB even if it's grayscale.
+            if image.mode != "RGB":
+                image = image.convert("RGB")
         else:
             image = Image.open(io.BytesIO(raw_data))
-            if image.mode not in ["RGB", "L"]:
+            # Convert all images to RGB.
+            if image.mode != "RGB":
                 image = image.convert("RGB")
 
         # Enforce minimum resolution.
@@ -280,7 +282,6 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
     except Exception as e:
         logger.error(f"Error processing image: {e}")
         raise HTTPException(status_code=500, detail="Image processing failed.")
-
 
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
@@ -303,7 +304,6 @@ def select_differentials(analysis: str) -> List[str]:
     """
     selected = []
     text = analysis.lower()
-
     if "pacemaker" in text:
         selected.append("Cardiology")
     if "consolidation" in text or "infiltrate" in text:
@@ -312,14 +312,12 @@ def select_differentials(analysis: str) -> List[str]:
         selected.append("Musculoskeletal")
     return selected
 
-
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
     """
     Appends additional differential details from the consolidated data.
     """
     extra_info = []
     radiology_data = medical_differentials.get("Radiology", {})
-
     for cat in categories:
         cat_data = radiology_data.get(cat, {})
         if not cat_data:
@@ -332,11 +330,9 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
                 else:
                     lines.append(f"- {subcat}: {details}")
         extra_info.append("\n".join(lines))
-
     if extra_info:
         return analysis_text + "\n\n" + "\n\n".join(extra_info)
     return analysis_text
-
 
 def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modality: str) -> str:
     """
@@ -345,7 +341,6 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modal
     selected_guidelines = guidelines.get(modality, {})
     if not selected_guidelines:
         return analysis_text
-
     guideline_lines = []
     for guideline_name, details in selected_guidelines.items():
         guideline_lines.append(f"**{guideline_name} Guidelines Summary:**")
@@ -356,7 +351,6 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modal
             guideline_lines.append("- " + ", ".join(details))
         else:
             guideline_lines.append(f"- {details}")
-
     if guideline_lines:
         return analysis_text + "\n\n" + "\n".join(guideline_lines)
     return analysis_text
@@ -372,7 +366,6 @@ def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[
     """
     return fetch_pubmed_articles_sync(query, max_results)
 
-
 async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) -> str:
     """
     Wraps the synchronous PubMed fetching in an async call.
@@ -383,7 +376,6 @@ async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) ->
     if refs:
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return ""
-
 
 def extract_pubmed_query(analysis_text: str) -> Optional[str]:
     """
