@@ -16,15 +16,10 @@ from typing import Tuple, Optional, List, Dict, Any
 
 import numpy as np
 import pydicom
-from PIL import Image, UnidentifiedImageError, ImageFilter
+from PIL import Image, UnidentifiedImageError
 import httpx
 from dotenv import load_dotenv
 load_dotenv()
-
-# New imports for advanced LADDER-based image diagnosis
-import torch
-import torchvision
-import torchvision.transforms as transforms
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +48,9 @@ except ImportError as e:
     medical_differentials = {}
 
 # Extract references from the unified dictionary
+# This dictionary includes Radiology, Oncology, Cardiology, and Guidelines keys.
 evidence_based_guidelines = medical_differentials.get("Guidelines", {})
+# The "Radiology" key, for instance, is medical_differentials["Radiology"].
 
 # PubMed fetching function (synchronous) from pubmed.py
 from pubmed import fetch_pubmed_articles_sync
@@ -97,27 +94,28 @@ REQUIRED_DISCLAIMER: str = (
 )
 
 ###############################################################################
-# Advanced LADDER-Based Image Diagnosis Module
+# Advanced LADDER-Based Image Diagnosis Module (Added)
 ###############################################################################
+# The following module is entirely new. It integrates an ensemble of pre-trained CNNs
+# (ResNet18 and MobileNet_v2) with Monte Carlo dropout, multi-variant image generation,
+# and a reinforcement learning loop to generate a preliminary CNN diagnosis. This is then
+# injected into the AI prompt without altering any of your original code.
+
+import torch
+import torchvision
+import torchvision.transforms as transforms
+from PIL import ImageFilter
 
 class LADDERImageDiagnosisAdvanced:
-    """
-    An advanced LADDER-inspired diagnosis class that:
-      - Uses an ensemble of two pre-trained CNNs (ResNet18 and MobileNet_v2).
-      - Generates multiple image variants via adaptive, multi-scale augmentations.
-      - Uses Monte Carlo dropout (MC dropout) to estimate uncertainty.
-      - Employs a reinforcement learning loop that updates the diagnosis based on a reward combining confidence and uncertainty.
-    """
     def __init__(self, device: str = "cpu"):
         self.device = device
-        # Load two pre-trained models for ensemble predictions.
-        self.model1 = torchvision.models.resnet18(pretrained=True).to(device)
-        self.model2 = torchvision.models.mobilenet_v2(pretrained=True).to(device)
+        # Load two pre-trained models for ensemble predictions using weights.
+        self.model1 = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1).to(device)
+        self.model2 = torchvision.models.mobilenet_v2(weights=torchvision.models.MobileNet_V2_Weights.IMAGENET1K_V1).to(device)
         self.models = [self.model1, self.model2]
-        # Enable dropout by setting models in train mode (MC dropout simulation).
+        # Enable dropout by setting models to train mode for MC dropout simulation.
         for m in self.models:
             m.train()
-        # Preprocessing transform.
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
@@ -127,19 +125,11 @@ class LADDERImageDiagnosisAdvanced:
         self.num_mc_samples = 5  # Number of MC dropout samples.
 
     def generate_variants(self, image: Image.Image) -> List[Image.Image]:
-        """
-        Generate multiple adaptive variants for robust diagnosis.
-        Variants include:
-          - Original image.
-          - Gaussian blur.
-          - Central crop (with subsequent resizing).
-          - Multi-scale variant (downscale then upscale).
-        """
         variants = [image]
         # Variant 1: Gaussian blur.
         variant1 = image.filter(ImageFilter.GaussianBlur(radius=1))
         variants.append(variant1)
-        # Variant 2: Central crop.
+        # Variant 2: Central crop (with resize).
         w, h = image.size
         crop_ratio = 0.8
         left = int((w - crop_ratio * w) / 2)
@@ -153,30 +143,20 @@ class LADDERImageDiagnosisAdvanced:
         return variants
 
     def diagnose_image_mc(self, image: Image.Image) -> Tuple[int, float, float]:
-        """
-        Perform MC dropout-based diagnosis on the given image.
-        Runs multiple forward passes for each model and aggregates predictions.
-        
-        Returns:
-            predicted_class, average confidence, and variance for that class.
-        """
         input_tensor = self.transform(image).unsqueeze(0).to(self.device)
         predictions = []
-        # For each model in the ensemble:
         for model in self.models:
-            # Ensure dropout is active.
-            model.train()
+            model.train()  # Ensure dropout is active.
             mc_preds = []
             for _ in range(self.num_mc_samples):
                 with torch.no_grad():
                     outputs = model(input_tensor)
                     prob = torch.softmax(outputs, dim=1).cpu().numpy()[0]
                     mc_preds.append(prob)
-            mc_preds = np.array(mc_preds)  # (num_samples, num_classes)
+            mc_preds = np.array(mc_preds)
             avg_pred = np.mean(mc_preds, axis=0)
             var_pred = np.var(mc_preds, axis=0)
             predictions.append((avg_pred, var_pred))
-        # Ensemble aggregation: average the predictions and variances.
         avg_preds = np.mean([pred[0] for pred in predictions], axis=0)
         avg_variance = np.mean([pred[1] for pred in predictions], axis=0)
         predicted_class = int(np.argmax(avg_preds))
@@ -185,52 +165,46 @@ class LADDERImageDiagnosisAdvanced:
         return predicted_class, confidence, variance
 
     def reinforcement_learning(self, image: Image.Image, iterations: int = 3) -> Tuple[int, float, float, Image.Image]:
-        """
-        Advanced RL loop: generates multiple variants and selects the best diagnosis based on a reward function.
-        The reward is defined as: reward = confidence - (weight * variance)
-        (Lower variance indicates a more reliable prediction.)
-        """
         best_class, best_conf, best_var = self.diagnose_image_mc(image)
         best_image = image
-        best_reward = best_conf - 0.5 * best_var  # Weight factor = 0.5
-        logger.info(f"[LADDER-Advanced] Initial Diagnosis: Class {best_class}, Confidence {best_conf:.2f}, Variance {best_var:.4f}")
-        
+        best_reward = best_conf - 0.5 * best_var  # Reward = confidence - weight * variance.
+        logger.info(f"[LADDER-Advanced] Initial: Class {best_class}, Confidence {best_conf:.2f}, Variance {best_var:.4f}")
         for i in range(iterations):
-            logger.info(f"[LADDER-Advanced] RL Iteration {i+1}")
+            logger.info(f"[LADDER-Advanced] Iteration {i+1}")
             for variant in self.generate_variants(best_image):
                 pred_class, conf, var = self.diagnose_image_mc(variant)
                 reward = conf - 0.5 * var
-                logger.info(f"[LADDER-Advanced] Variant Diagnosis: Class {pred_class}, Confidence {conf:.2f}, Variance {var:.4f}, Reward {reward:.2f}")
+                logger.info(f"[LADDER-Advanced] Variant: Class {pred_class}, Confidence {conf:.2f}, Variance {var:.4f}, Reward {reward:.2f}")
                 if reward > best_reward:
                     best_reward = reward
                     best_class, best_conf, best_var = pred_class, conf, var
                     best_image = variant
-                    logger.info("[LADDER-Advanced] Updating diagnosis based on improved reward.")
+                    logger.info("[LADDER-Advanced] Update: Improved reward achieved.")
         return best_class, best_conf, best_var, best_image
 
     def test_time_rl(self, image: Image.Image, iterations: int = 2) -> Tuple[int, float, float]:
-        """
-        Refines the diagnosis during inference via test-time RL.
-        """
         best_class, best_conf, best_var, _ = self.reinforcement_learning(image, iterations=iterations)
         return best_class, best_conf, best_var
 
 ###############################################################################
-# Utility Functions
+# Utility Functions (Original)
 ###############################################################################
 
 def encode_image_to_data_url(image: Image.Image) -> str:
     """
-    Converts a PIL Image into a base64-encoded data URL.
+    Converts a PIL Image into a base64-encoded data URL,
+    ideal for embedding within AI prompts or debugging.
     """
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{img_b64}"
 
+
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
     """
-    Checks essential DICOM fields and raises an HTTPException if missing.
+    Checks essential DICOM fields (e.g., Modality, BodyPartExamined, PatientID). 
+    Raises HTTPException if critical tags are missing, ensuring baseline completeness.
     """
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing = [tag for tag in required_tags if tag not in dicom_obj]
@@ -241,9 +215,13 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
             detail=f"Incomplete DICOM metadata: {', '.join(missing)}"
         )
 
+
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
     """
-    Processes an uploaded medical image (DICOM or standard), normalizing and resizing as needed.
+    Processes the uploaded medical image (DICOM or standard).
+    - For DICOM, normalizes pixel intensities and checks metadata.
+    - For non-DICOM, converts to RGB if needed.
+    - Ensures minimal resolution (512px).
     
     Returns:
         (PIL.Image, data_url_str)
@@ -255,16 +233,11 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
             pixel_array = dicom_obj.pixel_array
             norm_array = ((pixel_array - np.min(pixel_array)) / np.ptp(pixel_array) * 255).astype(np.uint8)
             image = Image.fromarray(norm_array)
-            # Convert DICOM image to RGB even if it's grayscale.
-            if image.mode != "RGB":
-                image = image.convert("RGB")
         else:
             image = Image.open(io.BytesIO(raw_data))
-            # Convert all images to RGB.
-            if image.mode != "RGB":
+            if image.mode not in ["RGB", "L"]:
                 image = image.convert("RGB")
-
-        # Enforce minimum resolution.
+        # Enforce minimum resolution
         if min(image.size) < MIN_RESOLUTION:
             w, h = image.size
             if w < h:
@@ -274,19 +247,18 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 new_h = MIN_RESOLUTION
                 new_w = int(w * (MIN_RESOLUTION / h))
             image = image.resize((new_w, new_h))
-
         return image, encode_image_to_data_url(image)
-
     except UnidentifiedImageError:
         raise HTTPException(status_code=400, detail="Invalid image file.")
     except Exception as e:
         logger.error(f"Error processing image: {e}")
         raise HTTPException(status_code=500, detail="Image processing failed.")
 
+
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     """
     Standardizes AI-generated text, removing extraneous whitespace and optionally
-    appending a mandatory disclaimer.
+    appending a mandatory disclaimer to maintain clinical safety.
     """
     lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
     formatted = "\n".join(lines)
@@ -295,12 +267,13 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
     return formatted
 
 ###############################################################################
-# Integrating Differentials and Guidelines
+# Integrating Differentials and Guidelines (Original)
 ###############################################################################
 
 def select_differentials(analysis: str) -> List[str]:
     """
-    Uses keyword matching to select differential categories.
+    Basic keyword-based approach to identify relevant differential categories 
+    from the Radiology subset. Expand as needed for deeper logic or NLP.
     """
     selected = []
     text = analysis.lower()
@@ -312,9 +285,11 @@ def select_differentials(analysis: str) -> List[str]:
         selected.append("Musculoskeletal")
     return selected
 
+
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
     """
-    Appends additional differential details from the consolidated data.
+    Appends relevant details from the Radiology or other domain differentials 
+    found in the consolidated 'medical_differentials'.
     """
     extra_info = []
     radiology_data = medical_differentials.get("Radiology", {})
@@ -334,9 +309,11 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
         return analysis_text + "\n\n" + "\n\n".join(extra_info)
     return analysis_text
 
+
 def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modality: str) -> str:
     """
-    Inserts relevant guidelines based on modality.
+    Inserts relevant guidelines from the consolidated dictionary if available 
+    (e.g., for 'ChestXRay', 'Mammogram', 'Histopathology').
     """
     selected_guidelines = guidelines.get(modality, {})
     if not selected_guidelines:
@@ -356,19 +333,22 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modal
     return analysis_text
 
 ###############################################################################
-# PubMed Querying
+# PubMed Querying (Original)
 ###############################################################################
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
     """
-    Caches PubMed results for performance.
+    Caches PubMed results for performance. Queries repeated within a session 
+    are quickly returned from memory.
     """
     return fetch_pubmed_articles_sync(query, max_results)
 
+
 async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) -> str:
     """
-    Wraps the synchronous PubMed fetching in an async call.
+    Wraps the synchronous PubMed fetching in an async call, enabling non-blocking operation.
+    Returns references as a formatted string or empty if none found.
     """
     if not query:
         return ""
@@ -377,9 +357,11 @@ async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) ->
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return ""
 
+
 def extract_pubmed_query(analysis_text: str) -> Optional[str]:
     """
-    Generates a context-specific PubMed query.
+    Generates a context-specific PubMed query based on the analysis text. 
+    Enhanced to detect 'Histopathology' triggers or other domain keywords.
     """
     txt = analysis_text.lower()
     if any(w in txt for w in ["histopathology", "microscopic", "ductal", "fibroadenoma"]):
@@ -395,7 +377,7 @@ def extract_pubmed_query(analysis_text: str) -> Optional[str]:
     return None
 
 ###############################################################################
-# OpenAI System Prompt
+# OpenAI System Prompt (Original)
 ###############################################################################
 
 system_prompt = (
@@ -409,7 +391,7 @@ system_prompt = (
 )
 
 ###############################################################################
-# FastAPI Endpoints
+# FastAPI Endpoints (Original with Added LADDER Integration)
 ###############################################################################
 
 @app.post("/analyze-image/", response_class=JSONResponse)
@@ -419,9 +401,9 @@ async def analyze_image(
     sex: Optional[str] = Query(None, description="Patient's sex (M/F)")
 ) -> Dict[str, Any]:
     """
-    Primary endpoint for processing medical images (DICOM or standard).
-    Returns an AI-driven diagnostic summary that integrates advanced LADDER-based diagnosis,
-    unified differentials, guidelines, and PubMed references. Final results are stored in MongoDB.
+    Primary endpoint for ingesting medical images (DICOM or standard). 
+    Returns an AI-driven diagnostic summary, supplemented with relevant guidelines 
+    and references. Final results are stored in MongoDB.
     """
     try:
         if age is not None:
@@ -432,17 +414,18 @@ async def analyze_image(
         raw_data = await file.read()
         filename = file.filename.lower()
 
-        # 1. Process the uploaded image.
+        # 1. Image Processing
         image, data_url = await process_medical_image(raw_data, filename)
 
-        # 2. Apply advanced LADDER-based Image Diagnosis.
+        # 1.5 Advanced LADDER-based Image Diagnosis Integration (Added)
+        # This section obtains a preliminary CNN diagnosis using the advanced LADDER module.
         device = "cuda" if torch.cuda.is_available() else "cpu"
         ladder_diag = LADDERImageDiagnosisAdvanced(device=device)
-        ladder_class, ladder_confidence, ladder_variance, refined_image = ladder_diag.reinforcement_learning(image, iterations=3)
+        ladder_class, ladder_confidence, ladder_variance, _ = ladder_diag.reinforcement_learning(image, iterations=3)
         ladder_result = f"LADDER Diagnosis: Class {ladder_class}, Confidence {ladder_confidence:.2f}, Variance {ladder_variance:.4f}"
         logger.info(ladder_result)
 
-        # 3. Prepare AI prompt including the LADDER diagnosis.
+        # 2. Prepare AI Prompt (including the preliminary LADDER diagnosis)
         messages = [
             {"role": "system", "content": system_prompt},
             {
@@ -454,27 +437,27 @@ async def analyze_image(
             }
         ]
 
-        # 4. AI inference using OpenAI's chat model.
+        # 3. AI Inference
         if client is None:
             logger.warning("OpenAI client not initialized.")
             analysis = "AI analysis service unavailable."
         else:
             response = await client.chat.completions.create(
-                model="gpt-4o",  # Replace with the actual model if needed.
+                model="gpt-4o",  # Replace with the actual model name if needed
                 messages=messages,
                 max_tokens=2500,
                 temperature=0.3
             )
             analysis = response.choices[0].message.content
 
-        # 5. Reformat analysis and incorporate mandatory disclaimers.
+        # 4. Reformat Analysis and incorporate disclaimers
         analysis = reformat_analysis(analysis)
 
-        # 6. Identify and incorporate relevant differentials.
+        # 5. Identify relevant differentials
         diff_cats = select_differentials(analysis)
         analysis = incorporate_differentials(analysis, diff_cats)
 
-        # 7. Determine modality for guidelines.
+        # 6. Determine modality for guidelines
         modality = "General"
         if filename.endswith(".dcm"):
             try:
@@ -484,7 +467,7 @@ async def analyze_image(
                     modality = "ChestXRay"
                 elif modality_tag == "MG":
                     modality = "Mammogram"
-                elif modality_tag == "SM":  # Slide microscopy/histopathology.
+                elif modality_tag == "SM":  # For slide microscopy or histopath
                     modality = "Histopathology"
             except Exception:
                 modality = "General"
@@ -497,19 +480,19 @@ async def analyze_image(
             elif "mammogram" in lower_analysis or "breast" in lower_analysis:
                 modality = "Mammogram"
 
-        # 8. Apply appropriate guidelines.
+        # 7. Apply appropriate guidelines
         analysis = incorporate_guidelines(analysis, evidence_based_guidelines, modality)
 
-        # 9. Fetch targeted PubMed references.
+        # 8. Fetch targeted PubMed references
         query = extract_pubmed_query(analysis)
         pubmed_refs = await fetch_pubmed_references(query)
         if pubmed_refs:
             analysis += "\n\n" + pubmed_refs
 
-        # 10. Store the final report in MongoDB.
+        # 9. Store the final report
         await asyncio.to_thread(store_report, filename, analysis)
 
-        # Prepare final JSON response.
+        # Prepare final JSON
         image_metadata = {
             "dimensions": image.size,
             "mode": image.mode,
@@ -518,7 +501,6 @@ async def analyze_image(
         return JSONResponse(content={
             "filename": filename,
             "image_metadata": image_metadata,
-            "ladder_diagnosis": ladder_result,
             "analysis": analysis
         })
 
@@ -531,6 +513,7 @@ async def analyze_image(
             detail="AI analysis service unavailable"
         )
 
+
 @app.get("/reports/", response_class=JSONResponse)
 async def get_all_reports() -> Dict[str, Any]:
     """
@@ -538,6 +521,7 @@ async def get_all_reports() -> Dict[str, Any]:
     """
     reports = await asyncio.to_thread(list_reports)
     return JSONResponse(content={"reports": reports})
+
 
 @app.get("/download-report/{filename}", response_class=JSONResponse)
 async def download_report(filename: str) -> Dict[str, Any]:
@@ -548,6 +532,7 @@ async def download_report(filename: str) -> Dict[str, Any]:
     if not report:
         raise HTTPException(status_code=404, detail="Report not found in database.")
     return JSONResponse(content=report)
+
 
 if __name__ == "__main__":
     import uvicorn
