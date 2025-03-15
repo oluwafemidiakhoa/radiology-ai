@@ -119,11 +119,10 @@ def adaptive_prompt(metadata: Dict[str, Any], ladder_result: str) -> List[Dict[s
     Assumes that 'system_prompt' is defined globally.
     """
     additional_context = ""
-    if "age" in metadata:
+    if "age" in metadata and metadata["age"] is not None:
         additional_context += f" Patient age: {metadata['age']}."
-    if "sex" in metadata:
+    if "sex" in metadata and metadata["sex"] is not None:
         additional_context += f" Patient sex: {metadata['sex']}."
-    # Add additional multi-modal data if available.
     base_prompt = f"Analyze this medical image. Preliminary CNN diagnosis: {ladder_result}.{additional_context}"
     return [
         {"role": "system", "content": system_prompt},
@@ -144,9 +143,7 @@ async def submit_feedback(
     Endpoint for clinicians to submit feedback on a diagnostic report.
     In a real system, this would store the feedback for future model fine-tuning.
     """
-    # For demonstration, we simply log the feedback.
     logger.info(f"Feedback received for report {report_id} from {clinician or 'unknown'}: {feedback}")
-    # Here, you might store feedback in a database or send it to a fine-tuning pipeline.
     return JSONResponse(content={"status": "Feedback submitted successfully."})
 
 # --- Uncertainty Alert System ---
@@ -161,10 +158,9 @@ def uncertainty_alert(confidence: float, variance: float, threshold: float = 0.1
 ###############################################################################
 # Advanced LADDER-Based Image Diagnosis Module (Added)
 ###############################################################################
-# The following module is entirely new. It integrates an ensemble of pre-trained CNNs
-# (ResNet18 and MobileNet_v2) with Monte Carlo dropout, multi-variant image generation,
-# and a reinforcement learning loop to generate a preliminary CNN diagnosis. This is then
-# injected into the AI prompt without altering any of your original code.
+# This module integrates an ensemble of pre-trained CNNs with MC dropout, ROI extraction,
+# multi-variant image generation, and a reinforcement learning loop to generate a preliminary
+# CNN diagnosis. This is then injected into the AI prompt without altering any of your original code.
 
 import torch
 import torchvision
@@ -173,7 +169,6 @@ import torchvision.transforms as transforms
 class LADDERImageDiagnosisAdvanced:
     def __init__(self, device: str = "cpu", domain: Optional[str] = None):
         self.device = device
-        # Domain-specific fine-tuning flag (if set, different weights might be loaded)
         self.domain = domain
         # Load two pre-trained models for ensemble predictions using weights.
         self.model1 = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1).to(device)
@@ -259,21 +254,12 @@ class LADDERImageDiagnosisAdvanced:
 ###############################################################################
 
 def encode_image_to_data_url(image: Image.Image) -> str:
-    """
-    Converts a PIL Image into a base64-encoded data URL,
-    ideal for embedding within AI prompts or debugging.
-    """
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=90)
     img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{img_b64}"
 
-
 def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
-    """
-    Checks essential DICOM fields (e.g., Modality, BodyPartExamined, PatientID). 
-    Raises HTTPException if critical tags are missing, ensuring baseline completeness.
-    """
     required_tags = ["Modality", "BodyPartExamined", "PatientID"]
     missing = [tag for tag in required_tags if tag not in dicom_obj]
     if missing:
@@ -283,17 +269,7 @@ def validate_dicom_metadata(dicom_obj: pydicom.Dataset) -> None:
             detail=f"Incomplete DICOM metadata: {', '.join(missing)}"
         )
 
-
 async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.Image, str]:
-    """
-    Processes the uploaded medical image (DICOM or standard).
-    - For DICOM, normalizes pixel intensities and checks metadata.
-    - For non-DICOM, converts to RGB if needed.
-    - Ensures minimal resolution (512px).
-    
-    Returns:
-        (PIL.Image, data_url_str)
-    """
     try:
         if filename.endswith(".dcm"):
             dicom_obj = pydicom.dcmread(io.BytesIO(raw_data))
@@ -315,6 +291,9 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
                 new_h = MIN_RESOLUTION
                 new_w = int(w * (MIN_RESOLUTION / h))
             image = image.resize((new_w, new_h))
+        # Ensure image is in RGB mode
+        if image.mode != "RGB":
+            image = image.convert("RGB")
         return image, encode_image_to_data_url(image)
     except UnidentifiedImageError:
         raise HTTPException(status_code=400, detail="Invalid image file.")
@@ -322,12 +301,7 @@ async def process_medical_image(raw_data: bytes, filename: str) -> Tuple[Image.I
         logger.error(f"Error processing image: {e}")
         raise HTTPException(status_code=500, detail="Image processing failed.")
 
-
 def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
-    """
-    Standardizes AI-generated text, removing extraneous whitespace and optionally
-    appending a mandatory disclaimer to maintain clinical safety.
-    """
     lines = [line.strip() for line in analysis_text.splitlines() if line.strip()]
     formatted = "\n".join(lines)
     if disclaimers and REQUIRED_DISCLAIMER not in formatted:
@@ -339,10 +313,6 @@ def reformat_analysis(analysis_text: str, disclaimers: bool = True) -> str:
 ###############################################################################
 
 def select_differentials(analysis: str) -> List[str]:
-    """
-    Basic keyword-based approach to identify relevant differential categories 
-    from the Radiology subset. Expand as needed for deeper logic or NLP.
-    """
     selected = []
     text = analysis.lower()
     if "pacemaker" in text:
@@ -353,12 +323,7 @@ def select_differentials(analysis: str) -> List[str]:
         selected.append("Musculoskeletal")
     return selected
 
-
 def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
-    """
-    Appends relevant details from the Radiology or other domain differentials 
-    found in the consolidated 'medical_differentials'.
-    """
     extra_info = []
     radiology_data = medical_differentials.get("Radiology", {})
     for cat in categories:
@@ -377,12 +342,7 @@ def incorporate_differentials(analysis_text: str, categories: List[str]) -> str:
         return analysis_text + "\n\n" + "\n\n".join(extra_info)
     return analysis_text
 
-
 def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modality: str) -> str:
-    """
-    Inserts relevant guidelines from the consolidated dictionary if available 
-    (e.g., for 'ChestXRay', 'Mammogram', 'Histopathology').
-    """
     selected_guidelines = guidelines.get(modality, {})
     if not selected_guidelines:
         return analysis_text
@@ -401,23 +361,14 @@ def incorporate_guidelines(analysis_text: str, guidelines: Dict[str, Any], modal
     return analysis_text
 
 ###############################################################################
-# PubMed Querying (Original)
+# PubMed Querying (Original with Fallback)
 ###############################################################################
 
 @lru_cache(maxsize=32)
 def fetch_pubmed_articles_sync_cached(query: str, max_results: int = 3) -> List[str]:
-    """
-    Caches PubMed results for performance. Queries repeated within a session 
-    are quickly returned from memory.
-    """
     return fetch_pubmed_articles_sync(query, max_results)
 
-
 async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) -> str:
-    """
-    Wraps the synchronous PubMed fetching in an async call, enabling non-blocking operation.
-    Returns references as a formatted string or empty if none found.
-    """
     if not query:
         return ""
     refs = await asyncio.to_thread(fetch_pubmed_articles_sync_cached, query, max_results)
@@ -425,12 +376,7 @@ async def fetch_pubmed_references(query: Optional[str], max_results: int = 3) ->
         return "**Relevant PubMed References:**\n" + "\n".join(f"- {r}" for r in refs)
     return ""
 
-
 def extract_pubmed_query(analysis_text: str) -> Optional[str]:
-    """
-    Generates a context-specific PubMed query based on the analysis text. 
-    Enhanced to detect 'Histopathology' triggers or other domain keywords.
-    """
     txt = analysis_text.lower()
     if any(w in txt for w in ["histopathology", "microscopic", "ductal", "fibroadenoma"]):
         return "fibroadenoma breast histopathology OR immunohistochemistry"
@@ -442,7 +388,7 @@ def extract_pubmed_query(analysis_text: str) -> Optional[str]:
         return "pulmonary nodule chest x-ray follow-up"
     if "mammogram" in txt or "breast mass" in txt:
         return "breast mass mammogram fibroadenoma or cyst"
-    return None
+    return "chest x-ray findings"
 
 ###############################################################################
 # OpenAI System Prompt (Original)
@@ -468,11 +414,6 @@ async def analyze_image(
     age: Optional[int] = Query(None, description="Patient's age"),
     sex: Optional[str] = Query(None, description="Patient's sex (M/F)")
 ) -> Dict[str, Any]:
-    """
-    Primary endpoint for ingesting medical images (DICOM or standard). 
-    Returns an AI-driven diagnostic summary, supplemented with relevant guidelines 
-    and references. Final results are stored in MongoDB.
-    """
     try:
         if age is not None:
             logger.info(f"Patient age: {age}")
@@ -486,7 +427,6 @@ async def analyze_image(
         image, data_url = await process_medical_image(raw_data, filename)
 
         # 1.5 Advanced LADDER-based Image Diagnosis Integration (Added)
-        # This section obtains a preliminary CNN diagnosis using the advanced LADDER module.
         device = "cuda" if torch.cuda.is_available() else "cpu"
         ladder_diag = LADDERImageDiagnosisAdvanced(device=device, domain="default")
         ladder_class, ladder_confidence, ladder_variance, _ = ladder_diag.reinforcement_learning(image, iterations=3)
@@ -495,7 +435,6 @@ async def analyze_image(
         logger.info(ladder_result)
 
         # 2. Prepare AI Prompt (including the preliminary LADDER diagnosis)
-        # Adaptive prompt optimization: inject patient metadata and the preliminary diagnosis.
         prompt_metadata = {"age": age, "sex": sex, "data_url": data_url}
         messages = adaptive_prompt(prompt_metadata, ladder_result)
 
@@ -529,7 +468,7 @@ async def analyze_image(
                     modality = "ChestXRay"
                 elif modality_tag == "MG":
                     modality = "Mammogram"
-                elif modality_tag == "SM":  # For slide microscopy or histopath
+                elif modality_tag == "SM":
                     modality = "Histopathology"
             except Exception:
                 modality = "General"
@@ -575,26 +514,17 @@ async def analyze_image(
             detail="AI analysis service unavailable"
         )
 
-
 @app.get("/reports/", response_class=JSONResponse)
 async def get_all_reports() -> Dict[str, Any]:
-    """
-    Lists all stored diagnostic reports from MongoDB.
-    """
     reports = await asyncio.to_thread(list_reports)
     return JSONResponse(content={"reports": reports})
 
-
 @app.get("/download-report/{filename}", response_class=JSONResponse)
 async def download_report(filename: str) -> Dict[str, Any]:
-    """
-    Retrieves a specific diagnostic report by filename from MongoDB.
-    """
     report = await asyncio.to_thread(get_report, filename)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found in database.")
     return JSONResponse(content=report)
-
 
 if __name__ == "__main__":
     import uvicorn
