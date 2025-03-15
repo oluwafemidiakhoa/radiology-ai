@@ -94,6 +94,74 @@ REQUIRED_DISCLAIMER: str = (
 )
 
 ###############################################################################
+# Additional Enhancements: Advanced Data Augmentation, ROI Extraction, Adaptive Prompt,
+# Feedback Loop Integration, Multi-Modal Data Fusion & Uncertainty Alert System
+###############################################################################
+
+# --- ROI Extraction ---
+def extract_roi(image: Image.Image) -> Image.Image:
+    """
+    Dummy ROI extraction: For demonstration, simply returns a central crop.
+    In practice, integrate a segmentation model (e.g., U-Net) to extract regions of interest.
+    """
+    w, h = image.size
+    crop_ratio = 0.9  # adjust as needed
+    left = int((w - crop_ratio * w) / 2)
+    top = int((h - crop_ratio * h) / 2)
+    roi = image.crop((left, top, left + int(crop_ratio * w), top + int(crop_ratio * h)))
+    return roi
+
+# --- Adaptive Prompt Optimization ---
+def adaptive_prompt(metadata: Dict[str, Any], ladder_result: str) -> List[Dict[str, Any]]:
+    """
+    Dynamically generates the AI prompt messages by incorporating extra metadata
+    (e.g., patient age, sex) and the preliminary CNN diagnosis.
+    """
+    additional_context = ""
+    if "age" in metadata:
+        additional_context += f" Patient age: {metadata['age']}."
+    if "sex" in metadata:
+        additional_context += f" Patient sex: {metadata['sex']}."
+    # Add additional multi-modal data if available.
+    base_prompt = (
+        "Analyze this medical image. "
+        "Preliminary CNN diagnosis: " + ladder_result + "."
+        + additional_context
+    )
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": [
+            {"type": "text", "text": base_prompt},
+            {"type": "image_url", "image_url": {"url": metadata.get("data_url", ""), "detail": "high"}}
+        ]}
+    ]
+
+# --- Feedback Loop Integration ---
+@app.post("/submit-feedback/", response_class=JSONResponse)
+async def submit_feedback(
+    report_id: str,
+    feedback: str,
+    clinician: Optional[str] = Query(None, description="Clinician identifier")
+) -> Dict[str, Any]:
+    """
+    Endpoint for clinicians to submit feedback on a diagnostic report.
+    In a real system, this would store the feedback for future model fine-tuning.
+    """
+    # For demonstration, we simply log the feedback.
+    logger.info(f"Feedback received for report {report_id} from {clinician or 'unknown'}: {feedback}")
+    # Here, you might store feedback in a database or send it to a fine-tuning pipeline.
+    return JSONResponse(content={"status": "Feedback submitted successfully."})
+
+# --- Uncertainty Alert System ---
+def uncertainty_alert(confidence: float, variance: float, threshold: float = 0.1) -> str:
+    """
+    If model uncertainty (variance) is above a threshold, return an alert message.
+    """
+    if variance > threshold:
+        return " ALERT: Model uncertainty is high; further clinical review is recommended."
+    return ""
+
+###############################################################################
 # Advanced LADDER-Based Image Diagnosis Module (Added)
 ###############################################################################
 # The following module is entirely new. It integrates an ensemble of pre-trained CNNs
@@ -107,8 +175,10 @@ import torchvision.transforms as transforms
 from PIL import ImageFilter
 
 class LADDERImageDiagnosisAdvanced:
-    def __init__(self, device: str = "cpu"):
+    def __init__(self, device: str = "cpu", domain: Optional[str] = None):
         self.device = device
+        # Domain-specific fine-tuning flag (if set, different weights might be loaded)
+        self.domain = domain
         # Load two pre-trained models for ensemble predictions using weights.
         self.model1 = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1).to(device)
         self.model2 = torchvision.models.mobilenet_v2(weights=torchvision.models.MobileNet_V2_Weights.IMAGENET1K_V1).to(device)
@@ -125,20 +195,22 @@ class LADDERImageDiagnosisAdvanced:
         self.num_mc_samples = 5  # Number of MC dropout samples.
 
     def generate_variants(self, image: Image.Image) -> List[Image.Image]:
-        variants = [image]
+        # Additionally, extract ROI before generating variants.
+        roi_image = extract_roi(image)
+        variants = [roi_image, image]
         # Variant 1: Gaussian blur.
-        variant1 = image.filter(ImageFilter.GaussianBlur(radius=1))
+        variant1 = roi_image.filter(ImageFilter.GaussianBlur(radius=1))
         variants.append(variant1)
         # Variant 2: Central crop (with resize).
-        w, h = image.size
+        w, h = roi_image.size
         crop_ratio = 0.8
         left = int((w - crop_ratio * w) / 2)
         top = int((h - crop_ratio * h) / 2)
-        variant2 = image.crop((left, top, left + int(crop_ratio * w), top + int(crop_ratio * h)))
+        variant2 = roi_image.crop((left, top, left + int(crop_ratio * w), top + int(crop_ratio * h)))
         variant2 = variant2.resize((w, h))
         variants.append(variant2)
         # Variant 3: Multi-scale (downscale then upscale).
-        variant3 = image.resize((w // 2, h // 2)).resize((w, h))
+        variant3 = roi_image.resize((w // 2, h // 2)).resize((w, h))
         variants.append(variant3)
         return variants
 
@@ -391,7 +463,7 @@ system_prompt = (
 )
 
 ###############################################################################
-# FastAPI Endpoints (Original with Added LADDER Integration)
+# FastAPI Endpoints (Original with Added LADDER Integration & Enhancements)
 ###############################################################################
 
 @app.post("/analyze-image/", response_class=JSONResponse)
@@ -420,22 +492,16 @@ async def analyze_image(
         # 1.5 Advanced LADDER-based Image Diagnosis Integration (Added)
         # This section obtains a preliminary CNN diagnosis using the advanced LADDER module.
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        ladder_diag = LADDERImageDiagnosisAdvanced(device=device)
+        ladder_diag = LADDERImageDiagnosisAdvanced(device=device, domain="default")
         ladder_class, ladder_confidence, ladder_variance, _ = ladder_diag.reinforcement_learning(image, iterations=3)
-        ladder_result = f"LADDER Diagnosis: Class {ladder_class}, Confidence {ladder_confidence:.2f}, Variance {ladder_variance:.4f}"
+        alert_message = uncertainty_alert(ladder_confidence, ladder_variance)
+        ladder_result = f"LADDER Diagnosis: Class {ladder_class}, Confidence {ladder_confidence:.2f}, Variance {ladder_variance:.4f}{alert_message}"
         logger.info(ladder_result)
 
         # 2. Prepare AI Prompt (including the preliminary LADDER diagnosis)
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Analyze this medical image. Preliminary CNN diagnosis: " + ladder_result},
-                    {"type": "image_url", "image_url": {"url": data_url, "detail": "high"}}
-                ]
-            }
-        ]
+        # Adaptive prompt optimization: inject patient metadata and the preliminary diagnosis.
+        prompt_metadata = {"age": age, "sex": sex, "data_url": data_url}
+        messages = adaptive_prompt(prompt_metadata, ladder_result)
 
         # 3. AI Inference
         if client is None:
