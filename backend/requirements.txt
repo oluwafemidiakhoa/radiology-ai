@@ -11,4 +11,5 @@ sentry-sdk
 slowapi
 torch==1.13.1
 torchvision==0.14.1
-numpy
+numpy==1.23.5
+
