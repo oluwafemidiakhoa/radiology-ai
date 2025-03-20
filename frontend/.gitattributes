@@ -1,0 +1,9 @@
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.dat filter=lfs diff=lfs merge=lfs -text
+*.tmp filter=lfs diff=lfs merge=lfs -text
+*.so filter=lfs diff=lfs merge=lfs -text
+*.cab filter=lfs diff=lfs merge=lfs -text
+SOFTWARE filter=lfs diff=lfs merge=lfs -text
+catdb filter=lfs diff=lfs merge=lfs -text

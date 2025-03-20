@@ -1,0 +1,41 @@
+/* Import Tailwind-generated styles */
+@import './tailwind.css';
+
+/* DICOM viewer specific overrides */
+.cornerstone-viewport-element {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* Prevent default canvas context menu */
+.cornerstone-canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Measurement annotations */
+.cornerstone-annotation {
+  font-family: theme('fontFamily.medical');
+  stroke-width: 2;
+}
+
+/* Window/Level presets dropdown */
+.ohif-dropdown {
+  @apply rounded-dicom border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800;
+}
+
+/* Loading indicator for DICOM images */
+.dicom-loading-overlay {
+  @apply absolute inset-0 flex items-center justify-center bg-gray-100/90 dark:bg-gray-900/90;
+  backdrop-filter: blur(4px);
+}
+
+/* Keyboard shortcut hint styling */
+.shortcut-key {
+  @apply px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-medical text-sm font-medical;
+}

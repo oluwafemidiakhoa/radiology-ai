@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles for medical imaging components */
+@layer base {
+  .dicom-viewport {
+    @apply bg-gray-50 dark:bg-gray-900;
+    min-height: 85vh;
+  }
+
+  .medical-toolbar button {
+    @apply p-2 rounded-dicom bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-medical;
+  }
+
+  /* Dark mode overrides for Cornerstone elements */
+  .dark .cornerstone-canvas {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  .dark .cornerstone-viewport-overlay {
+    color: theme('colors.gray.100') !important;
+  }
+}
+
+/* Custom component classes */
+@layer components {
+  .medical-card {
+    @apply bg-white dark:bg-gray-800 rounded-medical shadow-medical p-6;
+  }
+
+  .measurement-tool {
+    @apply border-2 border-diagnostic-highlight text-diagnostic-highlight dark:border-diagnostic-highlight/80 dark:text-diagnostic-highlight/90;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .transition-medical {
+    transition-property: background-color, border-color, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+
+  .scrollbar-medical::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .scrollbar-medical::-webkit-scrollbar-thumb {
+    @apply bg-diagnostic-blue-300 rounded-full;
+  }
+
+  .dark .scrollbar-medical::-webkit-scrollbar-thumb {
+    @apply bg-diagnostic-blue-600;
+  }
+}

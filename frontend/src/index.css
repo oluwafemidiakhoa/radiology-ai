@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Overrides */
+body {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Dark Mode Global Styles */
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}
+
+/* Headings Customization */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold tracking-tight;
+}
+
+/* Paragraph Margins */
+p {
+  @apply mb-4;
+}
+
+/* Consistent Link Styling */
+a {
+  @apply text-blue-600 hover:underline;
+}
+
+/* Ensure Images Are Responsive */
+img {
+  @apply max-w-full h-auto;
+}
+
+/* Standardize Button Styling */
+button {
+  @apply focus:outline-none transition-colors;
+}
+
+/* Custom Components */
+.wizard-step {
+  @apply flex items-center space-x-2 px-4 py-2 rounded-full shadow ring-2 ring-blue-300 hover:scale-105 transform transition-transform;
+}
+
+.advanced-viewer {
+  @apply bg-gray-50 dark:bg-gray-800 rounded-lg shadow-md p-6;
+}
+
+.toast-container {
+  @apply fixed bottom-0 right-0 m-4;
+}
+
+.container {
+  @apply max-w-6xl mx-auto px-4;
+}
+
+/* Remove redundant utility classes - Tailwind already provides these */
+/* Instead, add custom utilities in your tailwind.config.js if needed */

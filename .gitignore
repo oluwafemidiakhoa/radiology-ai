@@ -1,0 +1,24 @@
+# Ignore environment files (API keys, secrets)
+.env
+backend/.env
+frontend/.env
+
+# Ignore the build folder for the frontend
+/frontend/build
+
+# Enforce LF line endings for specific file types
+*.js text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+
+
+echo "
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore build files
+build/
+node_modules/
+" >> .gitignore
