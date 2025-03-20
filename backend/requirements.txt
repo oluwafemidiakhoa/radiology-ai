@@ -9,7 +9,7 @@ pydicom
 numpy
 sentry-sdk
 slowapi
-torch==1.13.1
+torch==2.0.0
 torchvision==0.15.1
 numpy==1.23.5
 open_clip_torch
