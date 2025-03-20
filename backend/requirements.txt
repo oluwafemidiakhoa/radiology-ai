@@ -10,7 +10,7 @@ numpy
 sentry-sdk
 slowapi
 torch==1.13.1
-torchvision==0.14.1
+torchvision==0.15.1
 numpy==1.23.5
 open_clip_torch
 transformers
