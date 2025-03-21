@@ -118,8 +118,6 @@ module.exports = {
     require('@tailwindcss/forms')({
       strategy: 'class',
     }),
-    require('@tailwindcss/typography')({
-      className: 'medical-prose',
-    })
+    require('@tailwindcss/typography')
   ]
 };
