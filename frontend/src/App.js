@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useEffect } from "react";
 import UploadImage from "./UploadImage";
 import MultiImageViewer from "./components/MultiImageViewer";
@@ -6,7 +7,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import "./styles/ReactToastify.min.css";
 import { UploadIcon, CheckCircleIcon, ExclamationIcon } from "@heroicons/react/solid";
 
-// Medical Imaging Dependencies
+// Cornerstone dependencies
 import cornerstone from "cornerstone-core";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import cornerstoneTools from "cornerstone-tools";
@@ -15,6 +16,7 @@ import dicomParser from "dicom-parser";
 // Tool Configuration
 import initCornerstoneTools from "./utils/cornerstoneConfig";
 
+// Fallback if viewer init fails
 function ErrorFallback({ error }) {
   return (
     <div
@@ -40,28 +42,29 @@ function App() {
   });
   const [imagingInitialized, setImagingInitialized] = useState(false);
 
-  // --- Medical Imaging Initialization ---
+  // --- Cornerstone Initialization ---
   useEffect(() => {
     let isMounted = true;
     let cleanupNeeded = false;
 
     const initializeImagingStack = async () => {
       try {
-        // Configure DICOM parser
+        // Link external libraries
         cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
         cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 
-        // Web Worker config
+        // Set worker paths (IMPORTANT: match your folder structure!)
         const workerConfig = {
-          webWorkerPath: `${process.env.PUBLIC_URL}/cornerstone/webworkers/cornerstoneWADOImageLoaderWebWorker.js`,
+          webWorkerPath: `${process.env.PUBLIC_URL}/cornerstone-assets/webworkers/cornerstoneWADOImageLoaderWebWorker.js`,
           taskConfiguration: {
             decodeTask: {
-              codecPath: `${process.env.PUBLIC_URL}/cornerstone/codecs/cornerstoneWADOImageLoaderCodecs.js`,
+              codecPath: `${process.env.PUBLIC_URL}/cornerstone-assets/webworkers/cornerstoneWADOImageLoaderCodecs.js`,
               usePDFJS: false,
             },
           },
         };
 
+        // Initialize WADO Image Loader workers
         cornerstoneWADOImageLoader.webWorkerManager.initialize(workerConfig);
 
         // Initialize cornerstoneTools
@@ -71,7 +74,7 @@ function App() {
           touchEnabled: true,
         });
 
-        // Register custom tools, if any
+        // Register or configure your tools
         initCornerstoneTools(cornerstone, cornerstoneTools);
 
         if (isMounted) {
@@ -91,13 +94,14 @@ function App() {
 
     initializeImagingStack();
 
+    // Cleanup
     return () => {
       isMounted = false;
       if (cleanupNeeded) {
         try {
-          cornerstoneWADOImageLoader?.webWorkerManager?.terminate();
-          cornerstoneTools?.globalToolSyncManager?.destroy();
-          cornerstone?.reset();
+          cornerstoneWADOImageLoader.webWorkerManager.terminate();
+          cornerstoneTools.globalToolSyncManager?.destroy();
+          cornerstone.reset();
           console.log("Medical imaging resources cleaned up");
         } catch (cleanupError) {
           console.error("Cleanup error:", cleanupError);
