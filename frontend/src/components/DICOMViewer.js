@@ -1,12 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import cornerstone from 'cornerstone-core';
-import cornerstoneTools from 'cornerstone-tools';
-import { ClipLoader } from 'react-spinners';
+// src/components/DICOMViewer.js
+import React, { useEffect, useRef, useState } from "react";
+import cornerstone from "cornerstone-core";
+import cornerstoneTools from "cornerstone-tools";
+import { ClipLoader } from "react-spinners";
 
 export default function DICOMViewer({ imageId }) {
   const viewportRef = useRef(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const element = viewportRef.current;
@@ -16,25 +17,25 @@ export default function DICOMViewer({ imageId }) {
       try {
         setLoading(true);
         cornerstone.enable(element);
-        
         const image = await cornerstone.loadImage(imageId);
         cornerstone.displayImage(element, image);
-        
-        cornerstoneTools.setToolActive('Wwwc', {});
-        cornerstoneTools.setToolActive('Pan', {});
-        
+        // Activate default tools
+        cornerstoneTools.setToolActive("Wwwc", {});
+        cornerstoneTools.setToolActive("Pan", {});
         setLoading(false);
       } catch (err) {
-        setError('Failed to load DICOM image');
-        console.error('DICOM load error:', err);
+        setError("Failed to load DICOM image");
+        console.error("DICOM load error:", err);
       }
     };
 
     loadImage();
 
     return () => {
-      cornerstone.disable(element);
-      cornerstoneTools.clearToolState(element);
+      if (element) {
+        cornerstone.disable(element);
+        cornerstoneTools.clearToolState(element);
+      }
     };
   }, [imageId]);
 
@@ -53,10 +54,10 @@ export default function DICOMViewer({ imageId }) {
           <ClipLoader size={40} color="#3B82F6" />
         </div>
       )}
-      <div 
+      <div
         ref={viewportRef}
         className="h-full w-full bg-black"
-        style={{ minWidth: '512px', minHeight: '512px' }}
+        style={{ minWidth: "512px", minHeight: "512px" }}
       />
     </div>
   );
