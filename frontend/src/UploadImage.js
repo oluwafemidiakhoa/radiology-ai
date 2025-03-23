@@ -3,7 +3,7 @@ import { useDropzone } from "react-dropzone";
 import ReactMarkdown from "react-markdown";
 import dicomParser from "dicom-parser";
 import remarkGfm from "remark-gfm";
-import { analyzeImage } from "./api";
+import { analyzeImage } from "./api"; // <-- Make sure you have an `api.js` that exports `analyzeImage`
 import { ClipLoader } from "react-spinners";
 import { UploadIcon, CheckCircleIcon } from "@heroicons/react/solid";
 
@@ -15,14 +15,16 @@ function UploadImage() {
   const [dicomMetadata, setDicomMetadata] = useState(null);
   const [parsingDicom, setParsingDicom] = useState(false);
 
+  // Patient info
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
   const [specialty, setSpecialty] = useState("radiology");
 
+  // --- DICOM Parsing ---
   const parseDicomFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
           const byteArray = new Uint8Array(e.target.result);
           const dataSet = dicomParser.parseDicom(byteArray);
@@ -35,6 +37,7 @@ function UploadImage() {
     });
   };
 
+  // --- Dropzone logic ---
   const onDrop = useCallback(async (acceptedFiles) => {
     const uploadedFile = acceptedFiles[0];
     if (!uploadedFile) return;
@@ -47,7 +50,8 @@ function UploadImage() {
       return;
     }
 
-    const sizeLimit = isDicom ? 100 : 5;
+    // Enforce file size limit
+    const sizeLimit = isDicom ? 100 : 5; // MB
     if (uploadedFile.size > sizeLimit * 1024 * 1024) {
       setError(`File too large. Max ${sizeLimit}MB for ${isDicom ? 'DICOM' : 'images'}`);
       return;
@@ -63,9 +67,9 @@ function UploadImage() {
       try {
         const dataSet = await parseDicomFile(uploadedFile);
         const metadata = {
-          patientId: dataSet.string('x00100020'),
-          studyDate: dataSet.string('x00080020'),
-          modality: dataSet.string('x00080060'),
+          patientId: dataSet.string("x00100020"),
+          studyDate: dataSet.string("x00080020"),
+          modality: dataSet.string("x00080060"),
         };
         setDicomMetadata(metadata);
       } catch (parseError) {
@@ -81,25 +85,27 @@ function UploadImage() {
     multiple: false,
   });
 
-  const filePreview = file && file.type.startsWith("image/") 
-    ? URL.createObjectURL(file) 
-    : null;
+  // For displaying a preview if the file is an image
+  const filePreview =
+    file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
 
   useEffect(() => {
     return () => {
+      // Revoke the object URL on unmount
       if (filePreview) URL.revokeObjectURL(filePreview);
     };
   }, [filePreview]);
 
+  // --- Analysis handler ---
   const handleAnalysis = async () => {
     const validationErrors = [];
     if (!file) validationErrors.push("Please upload a medical image");
     if (!age || !sex) validationErrors.push("Age and sex are required");
     if (!specialty) validationErrors.push("Medical specialty required");
-    
+
     const numericAge = parseInt(age, 10);
     if (isNaN(numericAge)) validationErrors.push("Invalid age format");
-    
+
     if (validationErrors.length > 0) {
       setError(validationErrors.join(". ") + ".");
       return;
@@ -114,17 +120,21 @@ function UploadImage() {
       formData.append("age", numericAge);
       formData.append("sex", sex);
       formData.append("specialty", specialty);
-      
+
+      // Include DICOM metadata if available
       if (dicomMetadata) {
         formData.append("dicomMetadata", JSON.stringify(dicomMetadata));
       }
 
+      // Send to backend for analysis
       const data = await analyzeImage(formData);
+
+      // If we have DICOM metadata, prepend it to the report
       const enhancedReport = dicomMetadata
         ? `**DICOM Metadata**\n` +
-          `- Patient ID: ${dicomMetadata.patientId || 'N/A'}\n` +
-          `- Study Date: ${dicomMetadata.studyDate || 'N/A'}\n` +
-          `- Modality: ${dicomMetadata.modality || 'N/A'}\n\n` +
+          `- Patient ID: ${dicomMetadata.patientId || "N/A"}\n` +
+          `- Study Date: ${dicomMetadata.studyDate || "N/A"}\n` +
+          `- Modality: ${dicomMetadata.modality || "N/A"}\n\n` +
           data.analysis
         : data.analysis;
 
@@ -144,6 +154,7 @@ function UploadImage() {
       </h1>
 
       <div className="space-y-6">
+        {/* Upload area */}
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
@@ -158,10 +169,11 @@ function UploadImage() {
           </p>
         </div>
 
+        {/* File preview / DICOM info */}
         {file && (
           <div className="mt-4">
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-              {file.name.endsWith('.dcm') ? 'DICOM Viewer' : 'Preview'}
+              {file.name.endsWith(".dcm") ? "DICOM Viewer" : "Preview"}
             </p>
             {parsingDicom ? (
               <div className="flex items-center gap-2 text-gray-500">
@@ -178,9 +190,9 @@ function UploadImage() {
               <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                 <h3 className="font-semibold mb-2">DICOM Metadata</h3>
                 <ul className="space-y-1 text-sm">
-                  <li>Patient ID: {dicomMetadata.patientId || 'N/A'}</li>
-                  <li>Study Date: {dicomMetadata.studyDate || 'N/A'}</li>
-                  <li>Modality: {dicomMetadata.modality || 'N/A'}</li>
+                  <li>Patient ID: {dicomMetadata.patientId || "N/A"}</li>
+                  <li>Study Date: {dicomMetadata.studyDate || "N/A"}</li>
+                  <li>Modality: {dicomMetadata.modality || "N/A"}</li>
                 </ul>
               </div>
             ) : (
@@ -191,8 +203,67 @@ function UploadImage() {
           </div>
         )}
 
-        {/* Patient & Specialty inputs remain unchanged */}
+        {/* Patient info */}
+        <div className="space-y-4">
+          <div>
+            <label
+              className="block text-gray-700 dark:text-gray-300 font-semibold mb-1"
+              htmlFor="age"
+            >
+              Patient Age
+            </label>
+            <input
+              type="number"
+              id="age"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded"
+              placeholder="e.g. 45"
+            />
+          </div>
 
+          <div>
+            <label
+              className="block text-gray-700 dark:text-gray-300 font-semibold mb-1"
+              htmlFor="sex"
+            >
+              Patient Sex
+            </label>
+            <select
+              id="sex"
+              value={sex}
+              onChange={(e) => setSex(e.target.value)}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded"
+            >
+              <option value="">Select Sex</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              className="block text-gray-700 dark:text-gray-300 font-semibold mb-1"
+              htmlFor="specialty"
+            >
+              Specialty
+            </label>
+            <select
+              id="specialty"
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded"
+            >
+              <option value="radiology">Radiology</option>
+              <option value="cardiology">Cardiology</option>
+              <option value="oncology">Oncology</option>
+              {/* Add more specialties as needed */}
+            </select>
+          </div>
+        </div>
+
+        {/* Analyze button */}
         <button
           onClick={handleAnalysis}
           disabled={loading || parsingDicom}
@@ -212,7 +283,19 @@ function UploadImage() {
           )}
         </button>
 
-        {/* Error and report display remain unchanged */}
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded mt-4">
+            {error}
+          </div>
+        )}
+
+        {/* Report display */}
+        {report && (
+          <div className="bg-green-100 text-green-800 p-4 rounded mt-4">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
