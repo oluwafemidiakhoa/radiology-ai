@@ -1,15 +1,17 @@
-import * as cornerstone from 'cornerstone-core';
-import * as cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
+// src/utils/cornerstoneConfig.js
+// Example: register extra tools or set default tool settings.
 
-export default function initializeCornerstone() {
-  cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-  
-  cornerstoneWADOImageLoader.webWorkerManager.initialize({
-    webWorkerPath: '/cornerstone/webworkers/cornerstoneWADOImageLoaderWebWorker.js',
-    taskConfiguration: {
-      'decodeTask': {
-        codecsPath: '/cornerstone/codecs/cornerstoneWADOImageLoaderCodecs.js'
-      }
-    }
-  });
+function initCornerstoneTools(cornerstone, cornerstoneTools) {
+  // E.g. enable some built-in tools
+  const { PanTool, ZoomTool, LengthTool } = cornerstoneTools;
+
+  cornerstoneTools.addTool(PanTool);
+  cornerstoneTools.addTool(ZoomTool);
+  cornerstoneTools.addTool(LengthTool);
+
+  // Set default tool
+  cornerstoneTools.setToolActive("Pan", { mouseButtonMask: 1 });
+  cornerstoneTools.setToolActive("Zoom", { mouseButtonMask: 2 });
 }
+
+export default initCornerstoneTools;
