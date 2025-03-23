@@ -1,8 +1,8 @@
 // src/components/MultiImageViewer.js
 import React, { useState, useEffect, useRef } from "react";
 import ReactCornerstoneViewport from "react-cornerstone-viewport";
-import * as cornerstone from "cornerstone-core";
-import * as cornerstoneTools from "cornerstone-tools";
+import cornerstone from "cornerstone-core";
+import cornerstoneTools from "cornerstone-tools"; // Changed: default import instead of * as
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { ClipLoader } from "react-spinners";
@@ -10,7 +10,7 @@ import { ClipLoader } from "react-spinners";
 // Initialize Cornerstone, Tools, and Web Workers with updated paths
 const initializeCornerstone = async () => {
   try {
-    // Initialize cornerstone tools
+    // Initialize cornerstone tools with settings
     cornerstoneTools.init({
       globalToolSyncEnabled: true,
       showSVGCursors: true,
