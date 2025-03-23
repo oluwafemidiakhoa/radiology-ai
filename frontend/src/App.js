@@ -17,7 +17,10 @@ import initCornerstoneTools from "./utils/cornerstoneConfig";
 
 function ErrorFallback({ error }) {
   return (
-    <div role="alert" className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg">
+    <div
+      role="alert"
+      className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg"
+    >
       <p className="font-bold">Viewer initialization failed:</p>
       <pre className="mt-2 text-sm">{error.message}</pre>
       <button
@@ -37,38 +40,38 @@ function App() {
   });
   const [imagingInitialized, setImagingInitialized] = useState(false);
 
-  // Medical Imaging Initialization
+  // --- Medical Imaging Initialization ---
   useEffect(() => {
     let isMounted = true;
     let cleanupNeeded = false;
 
     const initializeImagingStack = async () => {
       try {
-        // Configure DICOM parser first
+        // Configure DICOM parser
         cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
         cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 
-        // Initialize web workers with error handling
+        // Web Worker config
         const workerConfig = {
           webWorkerPath: `${process.env.PUBLIC_URL}/cornerstone/webworkers/cornerstoneWADOImageLoaderWebWorker.js`,
           taskConfiguration: {
             decodeTask: {
               codecPath: `${process.env.PUBLIC_URL}/cornerstone/codecs/cornerstoneWADOImageLoaderCodecs.js`,
-              usePDFJS: false
-            }
-          }
+              usePDFJS: false,
+            },
+          },
         };
 
         cornerstoneWADOImageLoader.webWorkerManager.initialize(workerConfig);
 
-        // Initialize tools with proper configuration
+        // Initialize cornerstoneTools
         cornerstoneTools.init({
           globalToolSyncEnabled: true,
           showSVGCursors: true,
-          touchEnabled: true
+          touchEnabled: true,
         });
 
-        // Register custom tools
+        // Register custom tools, if any
         initCornerstoneTools(cornerstone, cornerstoneTools);
 
         if (isMounted) {
@@ -79,7 +82,9 @@ function App() {
       } catch (error) {
         console.error("Medical imaging initialization failed:", error);
         if (isMounted) {
-          throw new Error("Failed to initialize DICOM components. Please check the console for details.");
+          throw new Error(
+            "Failed to initialize DICOM components. Please check the console for details."
+          );
         }
       }
     };
@@ -90,7 +95,6 @@ function App() {
       isMounted = false;
       if (cleanupNeeded) {
         try {
-          // Safe cleanup with null checks
           cornerstoneWADOImageLoader?.webWorkerManager?.terminate();
           cornerstoneTools?.globalToolSyncManager?.destroy();
           cornerstone?.reset();
@@ -102,7 +106,7 @@ function App() {
     };
   }, []);
 
-  // Dark Mode Toggle
+  // --- Dark Mode Toggle ---
   const toggleDarkMode = () => {
     setDarkMode((prevMode) => {
       const newMode = !prevMode;
@@ -111,16 +115,17 @@ function App() {
     });
   };
 
-  // Scroll to Top Functionality
+  // --- Scroll to Top ---
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // Apply Dark Mode Class
+  // --- Apply Dark Mode Class ---
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 font-sans">
+      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-blue-600 dark:bg-gray-800 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="text-white font-bold text-xl">Medical Images AI</div>
@@ -147,6 +152,7 @@ function App() {
         </div>
       </nav>
 
+      {/* Hero Section */}
       <header className="relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 dark:from-gray-800 dark:to-gray-900 text-white shadow-md">
         <div
           style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/pattern.svg)` }}
@@ -175,6 +181,7 @@ function App() {
         </div>
       </header>
 
+      {/* About / How It Works */}
       <section id="about" className="max-w-6xl mx-auto px-4 py-8">
         <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400 text-center mb-4">
           How It Works
@@ -185,6 +192,7 @@ function App() {
         </p>
       </section>
 
+      {/* Upload & Analysis */}
       <main id="upload" className="flex-1 w-full max-w-6xl mx-auto px-4 mt-8 mb-8">
         <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4 mb-8">
           <div className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow ring-2 ring-blue-300 hover:scale-105 transition-transform">
@@ -209,6 +217,7 @@ function App() {
         </section>
       </main>
 
+      {/* DICOM Viewer */}
       <section
         id="viewer"
         className="max-w-6xl mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-md mt-4 mb-8"
@@ -227,6 +236,7 @@ function App() {
         </ErrorBoundary>
       </section>
 
+      {/* Additional Info */}
       <section className="max-w-6xl mx-auto px-4 py-8">
         <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400 text-center mb-4">
           Advanced Features
@@ -237,6 +247,7 @@ function App() {
         </p>
       </section>
 
+      {/* Disclaimer */}
       <section className="mt-8 p-4 bg-yellow-100 dark:bg-yellow-200 border-l-4 border-yellow-400 rounded-md text-yellow-800 dark:text-yellow-900 flex items-start space-x-2">
         <ExclamationIcon className="h-5 w-5 mt-1 text-yellow-700 dark:text-yellow-800" />
         <p className="text-sm leading-relaxed">
@@ -245,6 +256,7 @@ function App() {
         </p>
       </section>
 
+      {/* Footer */}
       <footer className="w-full py-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 text-center text-gray-500 dark:text-gray-400 text-sm">
           <p>&copy; 2025 Medical Images AI. All rights reserved.</p>
@@ -263,6 +275,7 @@ function App() {
         </div>
       </footer>
 
+      {/* Toast Notifications & Scroll to Top */}
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
